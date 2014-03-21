@@ -1,0 +1,608 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Gradle | 猫好きモバイルアプリケーション開発者記録]]></title>
+  <link href="http://kkoudev.github.io/blog/categories/gradle/atom.xml" rel="self"/>
+  <link href="http://kkoudev.github.io/"/>
+  <updated>2014-03-22T03:25:45+09:00</updated>
+  <id>http://kkoudev.github.io/</id>
+  <author>
+    <name><![CDATA[kkoudev]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[GradleでEclipseとIntellij IDEAの開発環境を作る]]></title>
+    <link href="http://kkoudev.github.io/blog/2014/03/22/gradle/"/>
+    <updated>2014-03-22T01:00:00+09:00</updated>
+    <id>http://kkoudev.github.io/blog/2014/03/22/gradle</id>
+    <content type="html"><![CDATA[<p>ちょっと前まではMavenでプロジェクトを構築している人も多かったですが、
+Android StudioがGradleを採用してからはGradleによるプロジェクト構築にシフトしている人も増えてきました。
+とはいえ、Web業界で古いシステムを保守・運用している方だとまだまだMavenメインの利用者が多いかと思いますので、
+Mavenからの移行も含めた観点で記載して行きます。</p>
+
+<h2>Mavenと比較したGradleの利点</h2>
+
+
+<p>Mavenと比較したGradleの利点を簡単にまとめると以下のような感じです。<br>
+(この記事を執筆時のGradleの最新バージョンは 1.11 です)</p>
+
+<br>
+
+
+<ul>
+<li>記述量が圧倒的に少ない</li>
+<li>記述言語がGroovyなのでJavaも使える。そのため比較的なんでも記述できる</li>
+<li>AntやMavenの機能も利用できる。特にAntはほぼすべての機能を利用可能。MavenはMavenプラグイン以外は殆ど利用可能</li>
+<li>IDE(EclipseやIntellij IDEA)の設定も細かく記述でき、そこからIDEの設定ファイルを生成できる</li>
+</ul>
+
+
+<br>
+
+
+<p>まだまだありますが、代表的な利点はこんな感じです。</p>
+
+<br>
+
+
+<h2>プロジェクトの準備</h2>
+
+
+<p>では早速ですが、各種設定をGradleで記述するための準備をしていきます。
+今回の例では、以下のようなプロジェクト構成とします。</p>
+
+<br>
+
+
+<table>
+<thead>
+<tr>
+<th align="left">プロジェクト名</th>
+<th align="left">説明</th>
+<th align="left">コンテキストパス</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">base</td>
+<td align="left">ベースロジックを含んだJavaプロジェクト</td>
+<td align="left">なし</td>
+</tr>
+<tr>
+<td align="left">batch</td>
+<td align="left">バッチシステム。baseプロジェクトを依存関係とする</td>
+<td align="left">なし</td>
+</tr>
+<tr>
+<td align="left">admin</td>
+<td align="left">管理サイト。baseプロジェクトを依存関係とする</td>
+<td align="left">/admin</td>
+</tr>
+<tr>
+<td align="left">front</td>
+<td align="left">ユーザが閲覧するサイト。baseプロジェクトを依存関係とする</td>
+<td align="left">/</td>
+</tr>
+</tbody>
+</table>
+
+
+<br>
+
+
+<p>また、各プロジェクトはMavenプロジェクトと同じで、以下のような一般的なWebアプリの構成にしておきます。</p>
+
+<p>```
+base &ndash; src &ndash; main &ndash; java</p>
+
+<pre><code>              - resources
+</code></pre>
+
+<p>batch &ndash; src &ndash; main &ndash; java</p>
+
+<pre><code>               - resources
+</code></pre>
+
+<p>admin &ndash; src &ndash; main &ndash; java</p>
+
+<pre><code>               - resources
+               - webapp
+</code></pre>
+
+<p>front &ndash; src &ndash; main &ndash; java</p>
+
+<pre><code>               - resources
+               - webapp
+</code></pre>
+
+<p>```
+このディレクトリ構成にしておくと、余計な設定を記述する必要がないので便利です。<br>
+そして、Gradleにおいて設定ファイルを記述する場合、「build.gradle」というファイル名で設定ファイルを作成し、
+この例のように複数プロジェクトがある場合は、Gradleのサブプロジェクトという機能を利用します。
+サブプロジェクト機能を利用するには、「settings.gradle」というファイルを更に用意し、
+build.gradleから定数値を外部ファイルから読み込みたい場合は、gradle.propertiesというファイルを用意します。
+以上を踏まえた上で、ファイルとディレクトリ構成としては以下のようになります。</p>
+
+<p>```
+project &ndash; base</p>
+
+<pre><code>    - batch
+    - admin
+    - front
+    - build.gradle
+    - gradle.properties
+    - settings.gradle
+</code></pre>
+
+<p>```</p>
+
+<h2>settings.gradle の記述</h2>
+
+
+<p>まず、settings.gralde を記述していきます。</p>
+
+<p><code>groovy
+include base
+include batch
+include admin
+include front
+</code></p>
+
+<p>これは project ディレクトリをメインのプロジェクトとしており、
+その配下にある include で指定したディレクトリをサブプロジェクトとして扱うという指定になります。
+以下のように指定することも可能です。</p>
+
+<p><code>groovy
+include base, batch, admin, front
+</code></p>
+
+<h2>gradle.properties の記述</h2>
+
+
+<p>以下の定数値を用意します。</p>
+
+<p>``` properties</p>
+
+<h1>Mavenの自分サーバ用リポジトリ</h1>
+
+<p>project.maven.repository.url=<a href="http://192.168.1.200/maven">http://192.168.1.200/maven</a></p>
+
+<h1>Javaのバージョン</h1>
+
+<p>java.version=1.6</p>
+
+<h1>Servletのバージョン</h1>
+
+<p>servlet.version=2.5
+```</p>
+
+<p>今回はこれらの値のみ外部ファイルへ記述します。</p>
+
+<h2>build.gradle の記述</h2>
+
+
+<p>それでは、メインとなる build.gradle の記述をしていきます。<br>
+以下のような内容になります。<br></p>
+
+<p>``` groovy
+/<em>*
+ * Gradleによるプロジェクトビルドスクリプト。
+ *
+ * @author Kou
+ </em>/
+apply plugin: &lsquo;eclipse&rsquo;
+apply plugin: &lsquo;idea&rsquo;</p>
+
+<p>/<em>*
+ * サブプロジェクト全体の共通設定。
+ *
+ </em>/
+subprojects {</p>
+
+<pre><code>apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'eclipse-wtp'
+apply plugin: 'idea'
+
+repositories {
+
+    maven {
+
+        url getProperty('project.maven.repository.url')
+
+    }
+    mavenCentral()
+
+}
+
+configurations {
+
+    // providedのコンパイル用ライブラリパス
+    provided
+
+}
+
+// Javaのバージョンを指定
+sourceCompatibility = getProperty('java.version')
+targetCompatibility = getProperty('java.version')
+
+eclipse {
+
+    classpath.defaultOutputDir = file('/target/classes')                // クラスファイル出力先
+
+}
+</code></pre>
+
+<p>}</p>
+
+<p>/<em>*
+ * ベースロジック
+ </em>/
+project(&lsquo;:base&rsquo;) {</p>
+
+<pre><code>// クラスパスへ provided を追加
+sourceSets.main.compileClasspath     += configurations.provided
+sourceSets.test.compileClasspath     += configurations.provided
+sourceSets.test.runtimeClasspath     += configurations.provided
+eclipse.classpath.plusConfigurations += configurations.provided
+idea.module.scopes.PROVIDED.plus     += configurations.provided
+
+dependencies {
+
+    // Java API
+    provided(
+            'javax.servlet:servlet-api:2.5',
+            'javax.servlet.jsp:jsp-api:2.0',
+    )
+
+    // Struts
+    compile(
+            'taglibs:standard:1.1.2',
+            'org.apache.struts:struts-core:1.3.10',
+            'org.apache.struts:struts-tiles:1.3.10',
+            'org.apache.struts:struts-taglib:1.3.10',
+            'org.apache.struts:struts-el:1.3.10',
+            'org.apache.struts:struts-extras:1.3.10',
+    )
+
+    // Solrj
+    compile(
+            'org.slf4j:slf4j-api:1.6.1',
+            'org.slf4j:slf4j-log4j12:1.6.1',
+            'org.apache.solr:solr-solrj:4.4.0',
+    )
+
+    // Solr Core
+    compile('org.apache.solr:solr-core:4.4.0') {
+        exclude group: 'org.slf4j', module: 'slf4j-jdk14'
+    }
+
+    // Test関係
+    testCompile(
+            'junit:junit:4.1.1',
+    )
+
+}
+</code></pre>
+
+<p>}</p>
+
+<p>/<em>*
+ * 管理サイト
+ </em>/
+project(&lsquo;:admin&rsquo;) {</p>
+
+<pre><code>apply plugin: 'war'
+
+// WARファイル名
+archivesBaseName = 'admin'
+
+// クラスパスへ provided を追加
+sourceSets.main.compileClasspath     += project(':base').configurations.provided
+sourceSets.test.compileClasspath     += project(':base').configurations.provided
+sourceSets.test.runtimeClasspath     += project(':base').configurations.provided
+eclipse.classpath.plusConfigurations += project(':base').configurations.provided
+idea.module.scopes.PROVIDED.plus     += project(':base').configurations.provided
+
+dependencies {
+
+    compile project(':base')
+
+}
+
+eclipse {
+
+    // Dynamic Web Projectの設定
+    wtp {
+
+        component {
+
+            // EclipseのWTPで起動する場合のコンテキストパス
+            contextPath = '/admin'
+
+        }
+
+        facet {
+
+            facet name: 'java', version: getProperty('java.version')
+            facet name: 'jst.web', version: getProperty('java.servlet.version')
+
+        }
+
+    }
+
+}
+</code></pre>
+
+<p>}</p>
+
+<p>/<em>*
+ * バッチ
+ </em>/
+project(&lsquo;:batch&rsquo;) {</p>
+
+<pre><code>// クラスパスへ provided を追加
+sourceSets.main.compileClasspath     += project(':base').configurations.provided
+sourceSets.test.compileClasspath     += project(':base').configurations.provided
+sourceSets.test.runtimeClasspath     += project(':base').configurations.provided
+eclipse.classpath.plusConfigurations += project(':base').configurations.provided
+idea.module.scopes.PROVIDED.plus     += project(':base').configurations.provided
+
+dependencies {
+
+    compile project(':base')
+
+}
+</code></pre>
+
+<p>}</p>
+
+<p>/<em>*
+ * フロントサイト
+ </em>/
+project(&lsquo;:front&rsquo;) {</p>
+
+<pre><code>apply plugin: 'war'
+
+// WARファイル名
+archivesBaseName = 'ROOT'
+
+// クラスパスへ provided を追加
+sourceSets.main.compileClasspath     += project(':base').configurations.provided
+sourceSets.test.compileClasspath     += project(':base').configurations.provided
+sourceSets.test.runtimeClasspath     += project(':base').configurations.provided
+eclipse.classpath.plusConfigurations += project(':base').configurations.provided
+idea.module.scopes.PROVIDED.plus     += project(':base').configurations.provided
+
+dependencies {
+
+    compile project(':base')
+
+}
+
+eclipse {
+
+    // Dynamic Web Projectの設定
+    wtp {
+
+        component {
+
+            // EclipseのWTPで起動する場合のコンテキストパス
+            contextPath = '/'
+
+        }
+
+        facet {
+
+            facet name: 'java', version: getProperty('java.version')
+            facet name: 'jst.web', version: getProperty('java.servlet.version')
+
+        }
+
+    }
+
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>基本はこれだけでOKです。
+Mavenの pom.xml と比較すると記述量が大分少なくなっていることがわかります。
+また、Mavenの場合は、各プロジェクトのディレクトリ配下に pom.xml を記述する必要がありましたが、
+Gradleでは１つのスクリプト内にすべての設定を記述できます。(敢えて分けて記述することも出来ます)</p>
+
+<p>では、１つ１つ解説していきます。</p>
+
+<h3>サブプロジェクト全体の設定</h3>
+
+
+<p>各サブプロジェクト全体の共通設定は subprojects というブロック内で指定します。
+ここから１つ１つ見て行きましょう。</p>
+
+<p><strong>01. プラグインの指定</strong></p>
+
+<p>先頭に apply plugin という指定がありますが、
+これはどのプラグインを利用するかという指定です。
+「Javaのimportのように単純に使いたいメソッドやクラスとかを呼び出すために定義しているだけだろう」と思われる方もいるかもしれませんが、
+Gradleにおいては少し意味合いが違って、<b>apply pluginを記述した段階でビルド動作に影響を与えます</b>。</p>
+
+<p><code>groovy
+apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'eclipse-wtp'
+apply plugin: 'idea'
+</code></p>
+
+<p>この４つの指定では、各サブプロジェクトが<br>
+・「Javaプロジェクトである」<br>
+・「Eclipseプロジェクトである」<br>
+・「Eclipse WTPプロジェクトである」<br>
+・「Intellij IDEAプロジェクトである」<br>
+ということをGradle側へ伝えています。
+この記述をすることで、各サブプロジェクトごとにEclipseやIntellij IDEAの設定ファイルを生成することが出来るようになります。</p>
+
+<p><strong>02. providedコンパイルの設定</strong></p>
+
+<p>「configurations」というブロックがあります。ここではプロジェクトで利用する設定パラメータを定義できます。
+後述する依存関係の記述に関係しますが、providedコンパイルを実現するために、ここで provided というパラメータを宣言しています。
+実は、Gradleでは Maven のような provided コンパイルの動作を標準ではサポートしていません。
+とはいえ、簡単に同様の処理を実現することが出来ます。そのための準備として、ここにパラメータを宣言します。</p>
+
+<p><strong>03. Javaのバージョンの設定</strong></p>
+
+<p>「sourceCompatibility」「targetCompatibility」という記述がありますが、
+これはビルド時に使用されるJavaのバージョン指定になります。
+これを記述しない場合、インストールされているJDKのバージョンでビルドされます。
+また、ここで指定したバージョンは、EclipseのJavaのバージョン指定にも利用されます。
+基本的には環境依存がないようにバージョン指定をしておくことをオススメします。</p>
+
+<p><strong>04. Eclipseでコンパイルしたクラスファイルの出力先の設定</strong></p>
+
+<p>「eclipse」というブロック内に、「classpath.defaultOutputDir」というプロパティがあります。
+ここに指定されたディレクトリにコンパイルしたクラスファイルが出力されます。
+指定しない場合は、各プロジェクトのディレクトリ直下に「bin」というディレクトリが作成され、そこに出力されます。</p>
+
+<h3>依存関係の記述</h3>
+
+
+<p>今回の例では、baseプロジェクトに利用する依存関係をすべて定義し、
+各サブプロジェクトにおいては base プロジェクトそのものを依存関係として定義しています。
+これはGradleに詳しくない方でも上記スクリプトを見ても大体予想がついているかと思いますが、
+「dependencies」という部分で定義します。
+dependenciesではMavenリポジトリにあるライブラリを指定することが出来ます。
+指定の形式としては、以下のようになります。</p>
+
+<p><code>
+compile 'groupId:artifactId:version'
+</code></p>
+
+<p>groupId、artifactId、versionをコロン(:)区切りで指定します。
+しかし、Servlet APIのJARなど、中にはWARビルド時にWAR内へ含めたくないライブラリもあります。
+その場合は以下のような指定が必要になります。</p>
+
+<p>``` groovy
+configurations {</p>
+
+<pre><code>// providedのコンパイル用ライブラリパス
+provided
+</code></pre>
+
+<p>}</p>
+
+<p>dependencies {</p>
+
+<pre><code>provided 'javax.servlet:servlet-api:2.5'
+</code></pre>
+
+<p>}</p>
+
+<p>// クラスパスへ provided を追加
+sourceSets.main.compileClasspath     += project(&lsquo;:base&rsquo;).configurations.provided
+sourceSets.test.compileClasspath     += project(&lsquo;:base&rsquo;).configurations.provided
+sourceSets.test.runtimeClasspath     += project(&lsquo;:base&rsquo;).configurations.provided
+eclipse.classpath.plusConfigurations += project(&lsquo;:base&rsquo;).configurations.provided    // Eclipse用のクラスパス
+idea.module.scopes.PROVIDED.plus     += project(&lsquo;:base&rsquo;).configurations.provided    // Intellij IDEA用の Provided クラスパス
+```</p>
+
+<p>このような指定をすることで、
+依存関係をリポジトリから取得しつつも、WARには含めないようにすることが出来ます。
+今回は base プロジェクトに宣言された provided な依存関係を base プロジェクトを依存関係とする各プロジェクトへ追加するため
+「project(&lsquo;:base&rsquo;).configurations.provided」を追加していますが、
+そのプロジェクトのみで provided の依存関係を定義する場合は「configurations.provided」を各クラスパスへ += で追加するようにしてください。</p>
+
+<h3>WARの設定</h3>
+
+
+<p>今回はTomcatを利用することを前提としていますので、
+その場合の設定です。
+まず、EclipseでWTPを利用する場合の設定が以下になります。</p>
+
+<p>``` groovy
+eclipse {</p>
+
+<pre><code>// Dynamic Web Projectの設定
+wtp {
+
+    component {
+
+        // EclipseのWTPで起動する場合のコンテキストパス
+        contextPath = '/'
+
+    }
+
+    facet {
+
+        facet name: 'java', version: getProperty('java.version')
+        facet name: 'jst.web', version: getProperty('java.servlet.version')
+
+    }
+
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>各ブロック名を見れば勘のいい方は大体理解できるかと思います。
+Eclipseの動的Webプロジェクトの必要な設定を上記の設定で記述しています。
+また、実際のWARファイル名は以下の指定になります。</p>
+
+<p>``` groovy
+/<em>*
+ * フロントサイト
+ </em>/
+project(&lsquo;:front&rsquo;) {</p>
+
+<pre><code>apply plugin: 'war'
+
+// WARファイル名
+archivesBaseName = 'ROOT'
+</code></pre>
+
+<p>}
+```</p>
+
+<p>ここで指定された名前がWARファイル名になります。(拡張子は不要)<br>
+Tomcatの場合だと、server.xmlに記述をしない場合はWARファイル名がそのままコンテキストパスになりますので<br>
+(ROOTという名前は例外として / になる) ここでWARファイル名を指定します。<br></p>
+
+<p>一見するとEclipseの方で設定しているからWARファイル名は勝手に設定してくれればいいと思う方もいるかもしれませんが、
+Eclipseの設定はあくまでEclipseにおける設定なので、
+実際にWARを作成時に使われる設定値ではありません。</p>
+
+<h3>実際にIDEで読み込んでみる</h3>
+
+
+<p>あとは実際にIDEでGradle Projectとしてインポートすれば完成です。<br>
+Gradle Projectとしてインポートするためには、Eclipseの場合はEclipse Marketplaceにある「Gradle Integration for Eclipse」プラグインをインストールしてください。<br>
+このプラグインを利用すると、リモートリポジトリから取得した依存関係の参照パスを
+ローカルPCのパスとしてEclipse設定ファイルへ記述しなくなるため
+Eclipseプロジェクトの設定ファイルを複数人で共有するプロジェクトにおいては最適です。</p>
+
+<p>Gradle Integration for Eclipseプラグインをインストールしたら<br>
+このプラグインのEclipse設定からソースファイルのエンコーディングの設定(-Dfile.encoding=UTF-8)を追加するのを忘れないでください。<br>
+そのままだとWindowsのデフォルトエンコーディングがMS932のため問題が出ます。<br></p>
+
+<p>Intellij IDEAにおいては、12以上のバージョンを利用している場合はJetGradleというIDEのエンジンが
+build.gradleの内容を解析してプロジェクトの作成をしてくれます。<br>
+ただし、Intellij IDEAのartifactsやfacetの設定はすべてを自動ではやってくれないので一部手動で行う必要があるのと、
+上記で記述した provided 指定したライブラリについては、JetGradle側で export 設定を何故か行わないため<br>
+ここも手動でチェックをつけてあげる必要が出てきます。<br>
+13.1からは自動でartifactsやfacetも生成してくれますが、artifactsは複数プロジェクトに対応していないのかROOTコンテキストのプロジェクト分しか作成されません。<br>
+Gradle側のIntellij IDEA対応はあまり熱心ではないみたいなのでこの辺はいずれ対応してくれるであろうことを期待しましょう。<br></p>
+
+<h3>まとめ</h3>
+
+
+<p>以上、早足で説明しましたが、
+導入としてはこれくらいの知識があれば利用できます。
+次回は実際にデプロイを行うときの手順を
+Mavenからの移行の観点を交えて説明していきたいと思います。</p>
+]]></content>
+  </entry>
+  
+</feed>

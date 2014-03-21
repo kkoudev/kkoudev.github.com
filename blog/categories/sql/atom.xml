@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: SQL | 猫好きモバイルアプリケーション開発者記録]]></title>
+  <link href="http://kkoudev.github.io/blog/categories/sql/atom.xml" rel="self"/>
+  <link href="http://kkoudev.github.io/"/>
+  <updated>2014-03-22T03:25:45+09:00</updated>
+  <id>http://kkoudev.github.io/</id>
+  <author>
+    <name><![CDATA[kkoudev]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[EXISTSとSQLの高速化について]]></title>
+    <link href="http://kkoudev.github.io/blog/2013/09/14/sql/"/>
+    <updated>2013-09-14T23:54:00+09:00</updated>
+    <id>http://kkoudev.github.io/blog/2013/09/14/sql</id>
+    <content type="html"><![CDATA[<p>SQL高速化についてはいろんなサイトで取り上げられているので
+今更取り上げる必要はないかと思っていましたが、
+ふと最近仕事をしている中でハマっている人が多いポイントであると感じたため
+改めて書いてみることにしました。</p>
+
+<h2>EXISTSが速いという誤解</h2>
+
+
+<p>EXISTSについて書かれたサイトを見ると、
+「速い」というような記述を見かけることが多いかと思います。
+しかし、これはあくまでサブクエリを組んだ場合に、INやイコールを使って比較するときと比べて速い場合が多いというだけであり、
+EXISTSが速いというわけでは決してありません。
+ハッキリ言ってしまうと、EXISTSを使うクエリは基本的に遅いです。</p>
+
+<p>これは正確に言うと、EXISTSを利用するケースにおいて<b>相関サブクエリ</b>が使われていることが原因で遅くなっています。
+相関サブクエリとはどういうものか、以下にメンバー情報を格納した MEMBER テーブルと、
+各メンバーごとのアクセスログを記録した ACCESS_LOG テーブルを例に説明してみます。</p>
+
+<p>＜MEMBERテーブル＞</p>
+
+<table>
+<thead>
+<tr>
+<th align="left">カラム名</th>
+<th align="left">内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">MEMBER_ID</td>
+<td align="left">メンバーID。プライマリキー</td>
+</tr>
+<tr>
+<td align="left">NAME</td>
+<td align="left">メンバー名</td>
+</tr>
+</tbody>
+</table>
+
+
+<br>
+
+
+<p>＜ACCESS_LOGテーブル＞</p>
+
+<table>
+<thead>
+<tr>
+<th align="left">カラム名</th>
+<th align="left">内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">MEMBER_ID</td>
+<td align="left">メンバーID。プライマリキー1</td>
+</tr>
+<tr>
+<td align="left">DATE</td>
+<td align="left">記録日時。プライマリキー2</td>
+</tr>
+<tr>
+<td align="left">IP</td>
+<td align="left">IPアドレス</td>
+</tr>
+</tbody>
+</table>
+
+
+<p>``` sql
+SELECT</p>
+
+<pre><code>MEMBER.MEMBER_ID,
+MEMBER.NAME
+</code></pre>
+
+<p>FROM</p>
+
+<pre><code>MEMBER
+</code></pre>
+
+<p>WHERE</p>
+
+<pre><code>EXISTS (
+SELECT
+    *
+FROM
+    ACCESS_LOG
+WHERE
+    ACCESS_LOG.MEMBER_ID = MEMBER.MEMBER_ID  /* サブクエリでメインクエリのIDを参照している */
+AND
+    ACCESS_LOG.DATE &gt;= '2013-08-01'
+AND
+    ACCESS_LOG.DATE &lt; '2013-09-01'
+)
+</code></pre>
+
+<p>```</p>
+
+<p>上記のように、メインとなるクエリのIDをサブクエリで参照しているクエリを相関サブクエリと言います。
+この相関サブクエリが遅い理由は、
+上記でいう「<b>MEMBERテーブルのレコード数×ACCESS_LOGテーブルのレコード数</b>」の数だけ比較処理が実行されてしまうからです。
+(EXISTS句を利用しているので、正確には一致するレコードが見つかればそこで比較処理は終了しますが、
+見つからなかった場合は「MEMBERテーブルのレコード数×ACCESS_LOGテーブルのレコード数」の比較処理が実行されてしまいます)</p>
+
+<p>これは各テーブルのレコード数が増えれば増えるほど、処理が一気に重くなることを示しています。
+特にこの例でいうアクセスログというものは、分単位でレコードが増えるようなデータとなりますので、
+システム規模が大きいとレコード数は1000万以上になることが予想されます。</p>
+
+<p>この場合、MEMBERテーブルのレコード数が 3000 件ほどであったとしても、
+アクセスログが1000万件あるとしたら、「3000×1000万＝300億」となり、膨大な数の比較を行うことになります。
+300億という比較回数が重たいということは誰の目から見ても明らかでしょう。</p>
+
+<p>EXISTS(というより相関サブクエリ)は見た目としてはわかりやすい記述ではありますが、
+このようにレコードの組み合わせの数だけ比較処理が実行されてしまうため、
+非常に効率が悪い処理ということになります。</p>
+
+<h2>EXISTSをINNER JOINに置き換える</h2>
+
+
+<p>これを解決するための手段が、INNER JOINへの置き換えになります。
+すべてのEXISTSはINNER JOINへ置き換え可能です。(余程特殊な記述でなければ)
+なぜINNER JOINへ置き換えると速くなるのかは、以下のSQL例を元に説明します。</p>
+
+<p>``` sql
+SELECT</p>
+
+<pre><code>MEMBER.MEMBER_ID,
+MEMBER.NAME
+</code></pre>
+
+<p>FROM</p>
+
+<pre><code>MEMBER
+</code></pre>
+
+<p>INNER JOIN (</p>
+
+<pre><code>SELECT
+    DISTINCT ACCESS_LOG.MEMBER_ID
+FROM
+    ACCESS_LOG
+WHERE
+    ACCESS_LOG.DATE &gt;= '2013-08-01'
+AND
+    ACCESS_LOG.DATE &lt; '2013-09-01'
+</code></pre>
+
+<p>) LOG_TEMP
+ON</p>
+
+<pre><code>LOG_TEMP.MEMBER_ID = MEMBER.MEMBER_ID
+</code></pre>
+
+<p>```</p>
+
+<p>このクエリが先述の相関サブクエリを利用したクエリと何が違うのかと言いますと、
+まず INNER JOIN の中にクエリが組まれています。
+これはWHERE句に記述されたサブクエリとは違い、<b>メインクエリよりも先に実行されます</b>。
+テンポラリテーブルと同じと言えばわかる人にはわかるかと思います。</p>
+
+<p>なので、まずINNER JOINの中で、日付範囲を絞って該当するアクセスログのメンバーIDを重複を除去して取得します。
+この時点で、結構な数の絞り込みが完了しています。(この1000万件が2011年からのアクセスログだとしたら、数十万件程度には絞れていることになります)
+その絞り込みが完了した結果と INNER JOIN すると、相関サブクエリを利用する場合と比べて劇的に比較回数が抑えられます。</p>
+
+<p>処理時間はサーバの処理速度にもよるのであくまで目安ですが、
+先述の相関サブクエリを利用したクエリで30分〜１時間応答が返ってこなかったクエリも、
+後述のINNER JOINへ置き換えた形に直すことで、１分以内に結果を取得することが出来ます。
+INNER JOINの形はデータ量が増えても比較回数が増えにくいため、非常に強力です。</p>
+
+<h2>NOT EXISTSの置き換え</h2>
+
+
+<p>EXISTSについてはINNER JOINへの置き換えが可能であることがわかりましたが、
+NOT EXISTSについてはどうなるでしょうか。
+「存在しない」ことを調べるわけですから、互いに存在する条件で取り出すINNER JOINでは表現することが出来ません。
+NOT EXISTSと同等の結果を JOIN で表現するには、
+LEFT JOINで結合し、WHERE句でIDが null かどうかを判定することで NOT EXISTS と同等の判定を行うことが出来ます。</p>
+
+<p>``` sql
+SELECT</p>
+
+<pre><code>MEMBER.MEMBER_ID,
+MEMBER.NAME
+</code></pre>
+
+<p>FROM</p>
+
+<pre><code>MEMBER
+</code></pre>
+
+<p>LEFT JOIN (</p>
+
+<pre><code>SELECT
+    DISTINCT ACCESS_LOG.MEMBER_ID
+FROM
+    ACCESS_LOG
+WHERE
+    ACCESS_LOG.DATE &gt;= '2013-08-01'
+AND
+    ACCESS_LOG.DATE &lt; '2013-09-01'
+</code></pre>
+
+<p>) LOG_TEMP
+ON</p>
+
+<pre><code>LOG_TEMP.MEMBER_ID = MEMBER.MEMBER_ID
+</code></pre>
+
+<p>WHERE</p>
+
+<pre><code>LOG_TEMP.MEMBER_ID is null /* ACCESS_LOGに含まれないメンバーIDを調べる */
+</code></pre>
+
+<p>```</p>
+
+<p>この場合も、NOT EXISTSを利用する場合と比べて、
+先にLEFT JOIN内のサブクエリが実行されるため(先に絞り込みを行って件数を減らした上で LEFT JOIN をしているので)高速になります。
+条件がない絞り込みの場合でも、MySQLの場合であればJOINの方が最適化されやすい傾向にあるので、
+その場合であってもNOT EXISTSよりも速いことが多いです。</p>
+
+<h2>まとめ</h2>
+
+
+<p>このように、普段EXISTSを始めとした相関サブクエリをさりげなく使っている場面は多いかと思いますが、
+システムのデータ量が増えれば増えるほど速度低下を招くクエリであるためオススメできません。
+記述的には少し記述量が増える場合もありますが、それに見合った速度を得ることが出来ますので、EXISTSは積極的にJOINへ置き換えることをお勧め致します。</p>
+]]></content>
+  </entry>
+  
+</feed>
