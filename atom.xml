@@ -4,7 +4,7 @@
   <title><![CDATA[猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-03-25T00:34:25+09:00</updated>
+  <updated>2014-03-25T00:38:21+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -71,7 +71,7 @@ JARの指定を行う場合、WARプロジェクト自体もJARビルドが出�
 また、batchファイルについてはWARと違い、依存関係となるライブラリも全てコピーしてあげなくてはいけません。</p>
 
 <p>Mavenだと maven-assembly-plugin というXMLに記述した構成でパッケージを作成するプラグインがありましたが、
-これもXMLファイルに設定を記述していくので若干面倒な感じがありました。
+これもXMLファイルに設定を記述していくので記述量が増えがちで若干面倒な感じがありました。
 GradleではWARやJARの他にZIPやTARを生成するタスクも用意されており、
 これらを組み合わせることで maven-assembly-plugin と同等の機能を実現できます。</p>
 
