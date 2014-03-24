@@ -9,9 +9,12 @@
   <meta name="author" content="kkoudev">
 
   
-  <meta name="description" content="ちょっと前まではMavenでプロジェクトを構築している人も多かったですが、
-Android StudioがGradleを採用してからはGradleによるプロジェクト構築にシフトしている人も増えてきました。
-とはいえ、Web業界で古いシステムを保守・ &hellip;">
+  <meta name="description" content="前回の続きです。
+Gradleのプロジェクトの設定が終わっただけでは当然ながら終わりません。
+次はビルドが必要になります。
+プロジェクト構成は前回の例をそのまま踏襲するとして、
+実際にビルドをするときのコマンドを紹介します。 WARとJARのビルド WARのビルドは以下のコマンドで行います。
+( &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -71,7 +74,243 @@ Android StudioがGradleを採用してからはGradleによるプロジェクト
       
   <header>
     
-      <h1 class="entry-title"><a href="/blog/2014/03/22/gradle/">GradleでEclipseとIntellij IDEAの開発環境を作る</a></h1>
+      <h1 class="entry-title"><a href="/blog/2014/03/24/gradle_deploy/">Gradleによるビルドとパッケージ作成</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-24T21:46:02+09:00" pubdate data-updated="true">Mar 24<span>th</span>, 2014</time>
+        
+         | <a href="/blog/2014/03/24/gradle_deploy/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>前回の続きです。
+Gradleのプロジェクトの設定が終わっただけでは当然ながら終わりません。
+次はビルドが必要になります。
+プロジェクト構成は前回の例をそのまま踏襲するとして、
+実際にビルドをするときのコマンドを紹介します。</p>
+
+<h2>WARとJARのビルド</h2>
+
+
+<p>WARのビルドは以下のコマンドで行います。
+(build.gradle ファイルのあるディレクトリへ移動してコマンドを実行します)</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="n">gradle</span> <span class="o">--</span><span class="n">daemon</span> <span class="n">war</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>なんとこれだけでWARのビルドが出来ます。
+非常に簡潔です。
+Gradleコマンドは立ち上がりが遅いのですが、上記のように &mdash;daemon というオプションを指定することでバックグラウンドに常駐するようになり、２回目以降のコマンドの立ち上がりが早くなります。</p>
+
+<p>さて、前回のプロジェクト構成ですと、WARプロジェクトではないbatchプロジェクトが存在していたかと思います。
+batchの場合はWARではなくJARとして作成する必要がありますので、上記のコマンドでは当然ビルドされません。
+以下のコマンドでビルドします。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="n">gradle</span> <span class="o">--</span><span class="n">daemon</span> <span class="o">:</span><span class="nl">batch:</span><span class="n">jar</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>「:batch:jar」という指定は batch プロジェクトの jar タスクを実行するという指定になります。
+WARのビルドの場合、build.gradle に記述されているWARプロジェクトを全て自動的に走査してビルドしてくれますが、
+JARの指定を行う場合、WARプロジェクト自体もJARビルドが出来てしまうため、「gradle &mdash;daemon jar」としてしまうと
+不要なプロジェクトに対してまでJARビルドが走ってしまいます。そのため、上記のようにプロジェクトを指定してビルドしています。</p>
+
+<p>また、gradleの実行タスクはひとまとめにすることが出来ますので、WARビルドとbatchプロジェクトのJARビルドを合わせると以下のようになります。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="n">gradle</span> <span class="o">--</span><span class="n">daemon</span> <span class="n">war</span> <span class="o">:</span><span class="nl">batch:</span><span class="n">jar</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<h2>リリース用パッケージの作成</h2>
+
+
+<p>次はリリース用のパッケージの作成についてです。
+デプロイ時はAPサーバにそのままWARをコピーすれば良いのですが、
+必要なファイルを全てひとまとめに圧縮して対象サーバへ転送し、ファイルを展開するような例も多いかと思います。
+また、batchファイルについてはWARと違い、依存関係となるライブラリも全てコピーしてあげなくてはいけません。</p>
+
+<p>Mavenだと maven-assembly-plugin というXMLに記述した構成でパッケージを作成するプラグインがありましたが、
+これもXMLファイルに設定を記述していくので若干面倒な感じがありました。
+GradleではWARやJARの他にZIPやTARを生成するタスクも用意されており、
+これらを組み合わせることで maven-assembly-plugin と同等の機能を実現できます。</p>
+
+<p>具体的にbatchパッケージを作成する例を紹介しますと、batchプロジェクトの設定に以下のようにタスクを定義します。
+(設定は前回のものを踏襲)</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * バッチ</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">project</span><span class="o">(</span><span class="s1">&#39;:batch&#39;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// クラスパスへ provided を追加</span>
+</span><span class='line'>    <span class="n">sourceSets</span><span class="o">.</span><span class="na">main</span><span class="o">.</span><span class="na">compileClasspath</span>     <span class="o">+=</span> <span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">).</span><span class="na">configurations</span><span class="o">.</span><span class="na">provided</span>
+</span><span class='line'>    <span class="n">sourceSets</span><span class="o">.</span><span class="na">test</span><span class="o">.</span><span class="na">compileClasspath</span>     <span class="o">+=</span> <span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">).</span><span class="na">configurations</span><span class="o">.</span><span class="na">provided</span>
+</span><span class='line'>    <span class="n">sourceSets</span><span class="o">.</span><span class="na">test</span><span class="o">.</span><span class="na">runtimeClasspath</span>     <span class="o">+=</span> <span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">).</span><span class="na">configurations</span><span class="o">.</span><span class="na">provided</span>
+</span><span class='line'>    <span class="n">eclipse</span><span class="o">.</span><span class="na">classpath</span><span class="o">.</span><span class="na">plusConfigurations</span> <span class="o">+=</span> <span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">).</span><span class="na">configurations</span><span class="o">.</span><span class="na">provided</span>
+</span><span class='line'>    <span class="n">idea</span><span class="o">.</span><span class="na">module</span><span class="o">.</span><span class="na">scopes</span><span class="o">.</span><span class="na">PROVIDED</span><span class="o">.</span><span class="na">plus</span>     <span class="o">+=</span> <span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">).</span><span class="na">configurations</span><span class="o">.</span><span class="na">provided</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">dependencies</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">compile</span> <span class="nf">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>    <span class="cm">/**</span>
+</span><span class='line'><span class="cm">     * リリース用パッケージの作成を行う。</span>
+</span><span class='line'><span class="cm">     *</span>
+</span><span class='line'><span class="cm">     */</span>
+</span><span class='line'>    <span class="n">task</span> <span class="nf">distribution</span><span class="o">(</span><span class="nl">type:</span> <span class="n">Zip</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">dependsOn</span> <span class="n">jar</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="nf">into</span> <span class="o">(</span><span class="s1">&#39;batch/bin&#39;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="n">from</span> <span class="s1">&#39;bin&#39;</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">into</span> <span class="o">(</span><span class="s1">&#39;batch/libs&#39;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="n">from</span> <span class="s1">&#39;build/libs/batch.jar&#39;</span>
+</span><span class='line'>            <span class="n">from</span> <span class="n">configurations</span><span class="o">.</span><span class="na">compile</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>上記にある distribution というタスクが新しく追加したタスクになります。
+「type: Zip」という指定からもわかるように、このタスクではZIPファイルを作成します。
+次に、dependsOn という指定がありますが、これは distribution タスクの実行が指定されたときに
+distributionタスク実行前に実行するタスクの指定になります。
+ここでは jar タスクが指定されていますので batchプロジェクトのjar ビルドが先に実行されるということになります。
+そして、distribution タスク内に記述されたディレクトリ構成でZIPファイルが作成されるという仕組みです。
+into というブロックの引数に ZIP ファイルのルートからのパスを記述し、
+そのブロック内に from という指定でコピーするファイルを指定するという感じです。</p>
+
+<p>上記の例で実際に作成されるZIPファイルとその中身は以下のようになります。</p>
+
+<pre><code>batch - bin  - (batch/binに含まれているファイル。シェルスクリプト等)
+        libs - batch.jar
+               batchプロジェクトの依存関係となるJARファイル全て
+               (configurations.compile 変数にコンパイル時に全ての依存関係ファイルへのパスが含まれている)
+</code></pre>
+
+
+<p>ちなみに、build/libs/batch.jar ファイルは jar タスクでビルド後に作成されるJARファイルになります。
+(デフォルトだとbatchプロジェクトのディレクトリからの相対パスで build/libs/batch.jar として作成されます)
+見ても判る通り、maven-assembly-pluginに比べて記述量が遥かに少ないことが判ります。
+このようにしてリリース用パッケージも簡単に作ることが出来ます。</p>
+
+<p>以上をまとめると、最終的にWARとJARおよびbatchパッケージを作成するコマンドは以下のようになります。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="n">gradle</span> <span class="o">--</span><span class="n">daemon</span> <span class="n">war</span> <span class="o">:</span><span class="nl">batch:</span><span class="n">distribution</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<h2>まとめ</h2>
+
+
+<p>このように、Gradleだとビルドとパッケージの作成も非常に簡単にできます。
+ここまでの話ですとMavenを利用する場合に比べての優位性というのは有るには有るが、敢えて移行する必要まであるか？と感じられている方は多いかも知れません。
+実際Mavenでも十分な例は多いです。</p>
+
+<p>ただ、MavenとGradleが決定的に違うところは、
+前者は「<strong><font color="red">設定ファイルを記述する</font></strong>」ビルドツールであり、
+後者は「<strong><font color="red">スクリプトを記述する</font></strong>」ビルドツールであることです。
+つまり、後者は println を使って途中経過を出力することが可能なので、デバッグも容易です。
+Mavenのように正しい設定ありきで内部の処理の動きを追えないツールと比べると大いに勝っている利点であると私は考えています。</p>
+
+<p>また、ここまで紹介していませんでしたが、
+GradleはGradle自体をインストールしていない環境でもJavaさえあれば実行できる gradlew という仕組みもあります。
+これも Maven にはない大きな利点です。</p>
+
+<p>次回はこれらの点の紹介も含めて、Gradleを利用する際によく利用するであろうTIPS集をいくつか紹介していきたいと思います。</p>
+</div>
+  
+  
+
+
+    </article>
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/03/22/gradle_ide/">GradleでEclipseとIntellij IDEAの開発環境を作る</a></h1>
     
     
       <p class="meta">
@@ -89,7 +328,7 @@ Android StudioがGradleを採用してからはGradleによるプロジェクト
 
 <time datetime="2014-03-22T01:00:00+09:00" pubdate data-updated="true">Mar 22<span>nd</span>, 2014</time>
         
-         | <a href="/blog/2014/03/22/gradle/#disqus_thread">Comments</a>
+         | <a href="/blog/2014/03/22/gradle_ide/#disqus_thread">Comments</a>
         
       </p>
     
@@ -1275,7 +1514,11 @@ LEFT JOINで結合し、WHERE句でIDが null かどうかを判定すること�
   <ul id="recent_posts">
     
       <li class="post">
-        <a href="/blog/2014/03/22/gradle/">GradleでEclipseとIntellij IDEAの開発環境を作る</a>
+        <a href="/blog/2014/03/24/gradle_deploy/">Gradleによるビルドとパッケージ作成</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/03/22/gradle_ide/">GradleでEclipseとIntellij IDEAの開発環境を作る</a>
       </li>
     
       <li class="post">

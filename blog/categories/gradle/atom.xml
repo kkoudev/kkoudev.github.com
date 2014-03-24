@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Gradle | 猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/blog/categories/gradle/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-03-22T04:26:14+09:00</updated>
+  <updated>2014-03-24T23:33:16+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -14,10 +14,168 @@
 
   
   <entry>
+    <title type="html"><![CDATA[Gradleによるビルドとパッケージ作成]]></title>
+    <link href="http://kkoudev.github.io/blog/2014/03/24/gradle_deploy/"/>
+    <updated>2014-03-24T21:46:02+09:00</updated>
+    <id>http://kkoudev.github.io/blog/2014/03/24/gradle_deploy</id>
+    <content type="html"><![CDATA[<p>前回の続きです。
+Gradleのプロジェクトの設定が終わっただけでは当然ながら終わりません。
+次はビルドが必要になります。
+プロジェクト構成は前回の例をそのまま踏襲するとして、
+実際にビルドをするときのコマンドを紹介します。</p>
+
+<h2>WARとJARのビルド</h2>
+
+
+<p>WARのビルドは以下のコマンドで行います。
+(build.gradle ファイルのあるディレクトリへ移動してコマンドを実行します)</p>
+
+<p><code>groovy
+gradle --daemon war
+</code></p>
+
+<p>なんとこれだけでWARのビルドが出来ます。
+非常に簡潔です。
+Gradleコマンドは立ち上がりが遅いのですが、上記のように &mdash;daemon というオプションを指定することでバックグラウンドに常駐するようになり、２回目以降のコマンドの立ち上がりが早くなります。</p>
+
+<p>さて、前回のプロジェクト構成ですと、WARプロジェクトではないbatchプロジェクトが存在していたかと思います。
+batchの場合はWARではなくJARとして作成する必要がありますので、上記のコマンドでは当然ビルドされません。
+以下のコマンドでビルドします。</p>
+
+<p><code>groovy
+gradle --daemon :batch:jar
+</code></p>
+
+<p>「:batch:jar」という指定は batch プロジェクトの jar タスクを実行するという指定になります。
+WARのビルドの場合、build.gradle に記述されているWARプロジェクトを全て自動的に走査してビルドしてくれますが、
+JARの指定を行う場合、WARプロジェクト自体もJARビルドが出来てしまうため、「gradle &mdash;daemon jar」としてしまうと
+不要なプロジェクトに対してまでJARビルドが走ってしまいます。そのため、上記のようにプロジェクトを指定してビルドしています。</p>
+
+<p>また、gradleの実行タスクはひとまとめにすることが出来ますので、WARビルドとbatchプロジェクトのJARビルドを合わせると以下のようになります。</p>
+
+<p><code>groovy
+gradle --daemon war :batch:jar
+</code></p>
+
+<h2>リリース用パッケージの作成</h2>
+
+
+<p>次はリリース用のパッケージの作成についてです。
+デプロイ時はAPサーバにそのままWARをコピーすれば良いのですが、
+必要なファイルを全てひとまとめに圧縮して対象サーバへ転送し、ファイルを展開するような例も多いかと思います。
+また、batchファイルについてはWARと違い、依存関係となるライブラリも全てコピーしてあげなくてはいけません。</p>
+
+<p>Mavenだと maven-assembly-plugin というXMLに記述した構成でパッケージを作成するプラグインがありましたが、
+これもXMLファイルに設定を記述していくので若干面倒な感じがありました。
+GradleではWARやJARの他にZIPやTARを生成するタスクも用意されており、
+これらを組み合わせることで maven-assembly-plugin と同等の機能を実現できます。</p>
+
+<p>具体的にbatchパッケージを作成する例を紹介しますと、batchプロジェクトの設定に以下のようにタスクを定義します。
+(設定は前回のものを踏襲)</p>
+
+<p>``` groovy
+/<em>*
+ * バッチ
+ </em>/
+project(&lsquo;:batch&rsquo;) {</p>
+
+<pre><code>// クラスパスへ provided を追加
+sourceSets.main.compileClasspath     += project(':base').configurations.provided
+sourceSets.test.compileClasspath     += project(':base').configurations.provided
+sourceSets.test.runtimeClasspath     += project(':base').configurations.provided
+eclipse.classpath.plusConfigurations += project(':base').configurations.provided
+idea.module.scopes.PROVIDED.plus     += project(':base').configurations.provided
+
+dependencies {
+
+    compile project(':base')
+
+}
+
+
+/**
+ * リリース用パッケージの作成を行う。
+ *
+ */
+task distribution(type: Zip) {
+
+    dependsOn jar
+
+    into ('batch/bin') {
+
+        from 'bin'
+
+    }
+
+    into ('batch/libs') {
+
+        from 'build/libs/batch.jar'
+        from configurations.compile
+
+    }
+
+}
+</code></pre>
+
+<p>}</p>
+
+<p>```</p>
+
+<p>上記にある distribution というタスクが新しく追加したタスクになります。
+「type: Zip」という指定からもわかるように、このタスクではZIPファイルを作成します。
+次に、dependsOn という指定がありますが、これは distribution タスクの実行が指定されたときに
+distributionタスク実行前に実行するタスクの指定になります。
+ここでは jar タスクが指定されていますので batchプロジェクトのjar ビルドが先に実行されるということになります。
+そして、distribution タスク内に記述されたディレクトリ構成でZIPファイルが作成されるという仕組みです。
+into というブロックの引数に ZIP ファイルのルートからのパスを記述し、
+そのブロック内に from という指定でコピーするファイルを指定するという感じです。</p>
+
+<p>上記の例で実際に作成されるZIPファイルとその中身は以下のようになります。</p>
+
+<pre><code>batch - bin  - (batch/binに含まれているファイル。シェルスクリプト等)
+        libs - batch.jar
+               batchプロジェクトの依存関係となるJARファイル全て
+               (configurations.compile 変数にコンパイル時に全ての依存関係ファイルへのパスが含まれている)
+</code></pre>
+
+
+<p>ちなみに、build/libs/batch.jar ファイルは jar タスクでビルド後に作成されるJARファイルになります。
+(デフォルトだとbatchプロジェクトのディレクトリからの相対パスで build/libs/batch.jar として作成されます)
+見ても判る通り、maven-assembly-pluginに比べて記述量が遥かに少ないことが判ります。
+このようにしてリリース用パッケージも簡単に作ることが出来ます。</p>
+
+<p>以上をまとめると、最終的にWARとJARおよびbatchパッケージを作成するコマンドは以下のようになります。</p>
+
+<p><code>groovy
+gradle --daemon war :batch:distribution
+</code></p>
+
+<h2>まとめ</h2>
+
+
+<p>このように、Gradleだとビルドとパッケージの作成も非常に簡単にできます。
+ここまでの話ですとMavenを利用する場合に比べての優位性というのは有るには有るが、敢えて移行する必要まであるか？と感じられている方は多いかも知れません。
+実際Mavenでも十分な例は多いです。</p>
+
+<p>ただ、MavenとGradleが決定的に違うところは、
+前者は「<strong><font color="red">設定ファイルを記述する</font></strong>」ビルドツールであり、
+後者は「<strong><font color="red">スクリプトを記述する</font></strong>」ビルドツールであることです。
+つまり、後者は println を使って途中経過を出力することが可能なので、デバッグも容易です。
+Mavenのように正しい設定ありきで内部の処理の動きを追えないツールと比べると大いに勝っている利点であると私は考えています。</p>
+
+<p>また、ここまで紹介していませんでしたが、
+GradleはGradle自体をインストールしていない環境でもJavaさえあれば実行できる gradlew という仕組みもあります。
+これも Maven にはない大きな利点です。</p>
+
+<p>次回はこれらの点の紹介も含めて、Gradleを利用する際によく利用するであろうTIPS集をいくつか紹介していきたいと思います。</p>
+]]></content>
+  </entry>
+  
+  <entry>
     <title type="html"><![CDATA[GradleでEclipseとIntellij IDEAの開発環境を作る]]></title>
-    <link href="http://kkoudev.github.io/blog/2014/03/22/gradle/"/>
+    <link href="http://kkoudev.github.io/blog/2014/03/22/gradle_ide/"/>
     <updated>2014-03-22T01:00:00+09:00</updated>
-    <id>http://kkoudev.github.io/blog/2014/03/22/gradle</id>
+    <id>http://kkoudev.github.io/blog/2014/03/22/gradle_ide</id>
     <content type="html"><![CDATA[<p>ちょっと前まではMavenでプロジェクトを構築している人も多かったですが、
 Android StudioがGradleを採用してからはGradleによるプロジェクト構築にシフトしている人も増えてきました。
 とはいえ、Web業界で古いシステムを保守・運用している方だとまだまだMavenメインの利用者が多いかと思いますので、
