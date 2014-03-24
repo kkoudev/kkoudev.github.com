@@ -4,7 +4,7 @@
   <title><![CDATA[猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-03-24T23:50:41+09:00</updated>
+  <updated>2014-03-25T00:34:25+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[Gradleによるビルドとパッケージ作成]]></title>
-    <link href="http://kkoudev.github.io/blog/2014/03/24/gradle_deploy/"/>
+    <link href="http://kkoudev.github.io/blog/2014/03/24/gradle_build/"/>
     <updated>2014-03-24T21:46:02+09:00</updated>
-    <id>http://kkoudev.github.io/blog/2014/03/24/gradle_deploy</id>
+    <id>http://kkoudev.github.io/blog/2014/03/24/gradle_build</id>
     <content type="html"><![CDATA[<p>前回の続きです。
 Gradleのプロジェクトの設定が終わっただけでは当然ながら終わりません。
 次はビルドが必要になります。
