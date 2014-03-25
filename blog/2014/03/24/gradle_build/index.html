@@ -198,8 +198,6 @@ GradleではWARやJARの他にZIPやTARを生成するタスクも用意され�
 <span class='line-number'>39</span>
 <span class='line-number'>40</span>
 <span class='line-number'>41</span>
-<span class='line-number'>42</span>
-<span class='line-number'>43</span>
 </pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="cm">/**</span>
 </span><span class='line'><span class="cm"> * バッチ</span>
 </span><span class='line'><span class="cm"> */</span>
@@ -223,11 +221,9 @@ GradleではWARやJARの他にZIPやTARを生成するタスクも用意され�
 </span><span class='line'><span class="cm">     * リリース用パッケージの作成を行う。</span>
 </span><span class='line'><span class="cm">     *</span>
 </span><span class='line'><span class="cm">     */</span>
-</span><span class='line'>    <span class="n">task</span> <span class="nf">distribution</span><span class="o">(</span><span class="nl">type:</span> <span class="n">Zip</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>    <span class="n">task</span> <span class="nf">distribution</span><span class="o">(</span><span class="nl">dependsOn:</span> <span class="s1">&#39;jar&#39;</span><span class="o">,</span> <span class="nl">type:</span> <span class="n">Zip</span><span class="o">)</span> <span class="o">{</span>
 </span><span class='line'>
-</span><span class='line'>        <span class="n">dependsOn</span> <span class="n">jar</span>
-</span><span class='line'>
-</span><span class='line'>        <span class="nf">into</span> <span class="o">(</span><span class="s1">&#39;batch/bin&#39;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>        <span class="n">into</span> <span class="o">(</span><span class="s1">&#39;batch/bin&#39;</span><span class="o">)</span> <span class="o">{</span>
 </span><span class='line'>
 </span><span class='line'>            <span class="n">from</span> <span class="s1">&#39;bin&#39;</span>
 </span><span class='line'>
