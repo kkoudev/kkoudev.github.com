@@ -4,7 +4,7 @@
   <title><![CDATA[猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-03-30T23:47:00+09:00</updated>
+  <updated>2014-03-30T23:49:56+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -775,7 +775,7 @@ testCompileの場合は「testCompile project(&lsquo;:base&rsquo;)」と指定�
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>上記のように、mavenブロックを複数宣言</p>
+<p>上記のように、mavenブロックを複数宣言することでURLを複数指定できます。</p>
 
 <h2>08. アーカイブタスクで exclude 指定が効かない</h2>
 
