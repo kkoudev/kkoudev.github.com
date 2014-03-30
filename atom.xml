@@ -4,7 +4,7 @@
   <title><![CDATA[猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-03-30T22:34:26+09:00</updated>
+  <updated>2014-03-30T22:52:17+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -15,9 +15,9 @@
   
   <entry>
     <title type="html"><![CDATA[Gradleで陥りやすい問題点の解決策TIPS集]]></title>
-    <link href="http://kkoudev.github.io/blog/2014/03/29/gradle-tips/"/>
-    <updated>2014-03-29T11:43:49+09:00</updated>
-    <id>http://kkoudev.github.io/blog/2014/03/29/gradle-tips</id>
+    <link href="http://kkoudev.github.io/blog/2014/03/30/gradle-tips/"/>
+    <updated>2014-03-30T22:45:00+09:00</updated>
+    <id>http://kkoudev.github.io/blog/2014/03/30/gradle-tips</id>
     <content type="html"><![CDATA[<p>今回はGradleでよくハマるであろうポイントを集めたTIPSを10個紹介します。</p>
 
 <h2>01. 依存関係のバージョンが指定されたものにならない</h2>
