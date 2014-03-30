@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Gradle | 猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/blog/categories/gradle/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-03-26T01:59:36+09:00</updated>
+  <updated>2014-03-30T22:34:26+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -12,6 +12,606 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Gradleで陥りやすい問題点の解決策TIPS集]]></title>
+    <link href="http://kkoudev.github.io/blog/2014/03/29/gradle-tips/"/>
+    <updated>2014-03-29T11:43:49+09:00</updated>
+    <id>http://kkoudev.github.io/blog/2014/03/29/gradle-tips</id>
+    <content type="html"><![CDATA[<p>今回はGradleでよくハマるであろうポイントを集めたTIPSを10個紹介します。</p>
+
+<h2>01. 依存関係のバージョンが指定されたものにならない</h2>
+
+
+<p>MavenからGradleへ移行した場合、おそらく誰もが最初に陥る問題かと思います。
+端的に言うと、Mavenの pom.xml で指定したままの依存関係の設定をそのまま build.gradle へ移したとしても
+最終的に取得される依存関係は殆どのケースで同じにはなりません。
+これは「<strong>推移的依存関係</strong>」によって同じライブラリが存在した場合に優先されるバージョンがMavenとGradleでは異なるために起こります。</p>
+
+<p>推移的依存関係とは簡単に説明すると、ある依存関係がさらに依存する関係のことを言います。
+MavenでもGradleでもそれらを自動的に取得しようとしますが、
+それらの中で使っている依存関係のgroupIdもartifactIdも同じだがバージョンが異なる場合、
+Javaでは同じライブラリの異なるバージョンを同じアプリ内へ共存させることが出来ませんから、
+どちらかを優先させる必要が出てきます。</p>
+
+<p>Mavenの場合は推移的依存関係における階層が高い方が優先されます。
+しかしGradleでは、<strong><font color="red">バージョンが一番高いものが優先されます。</font></strong>
+そのため、Gradleでは利用しない依存関係をひたすら exclude 指定で除外していく必要が出てきます。</p>
+
+<p>MavenからGradleへ移行する場合に依存関係のバージョンを含めて全く同じにしたい場合は、
+以下のように現在の依存関係の階層構造を出力してそれを比較して合わせていけばよいです。</p>
+
+<p>＜Mavenで依存関係階層構造を出力＞
+``` bash</p>
+
+<h1>対象となるプロジェクトの pom.xml のあるディレクトリへ移動して実行</h1>
+
+<p>mvn dependency:tree
+```</p>
+
+<p>＜Gradleで依存関係階層構造を出力＞
+``` bash</p>
+
+<h1>baseプロジェクトの依存関係階層構造を出力する</h1>
+
+<p>gradle :base:dependencies
+```</p>
+
+<p>とはいえ、これがとにかく面倒です。
+例えば自身で dependencies ブロックへ指定した依存関係が他の依存関係の推移的依存関係になっている場合、
+exclude指定を行っても一見除去されないように見えたり(or 指定したバージョンにならなかったり)と、結構ハマります。
+根気よく exclude 指定で不要なバージョンを除去して合わせていきましょう。</p>
+
+<h2>02. EclipseのWTPで起動した場合に他のプロジェクトを参照しているとその参照しているプロジェクトの依存関係を読み込まない</h2>
+
+
+<p>これも人によってはハマるポイントかと思います。
+Eclipse上ではコンパイルエラーが出ていないのに、WTPでTomcatを起動すると参照しているプロジェクトの依存関係が無いと言われてしまう(ClassNotFoundExceptionが発生してしまう)現象です。
+これは eclipse-wtp のプラグインの読み込み指定を行っていない場合に起こります。
+どういうことなのかと言いますと、この例が起こるのは以下のように build.gradle を記述したときに起こります。</p>
+
+<p>``` groovy
+/<em>*
+ * Gradleによるプロジェクトビルドスクリプト。
+ *
+ * @author Kou
+ </em>/
+apply plugin: &lsquo;eclipse&rsquo;
+apply plugin: &lsquo;idea&rsquo;</p>
+
+<p>/<em>*
+ * ベースロジック
+ </em>/
+project(&lsquo;:base&rsquo;) {</p>
+
+<pre><code>apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+
+dependencies {
+
+    // Struts
+    compile(
+            'taglibs:standard:1.1.2',
+            'org.apache.struts:struts-core:1.3.10',
+            'org.apache.struts:struts-tiles:1.3.10',
+            'org.apache.struts:struts-taglib:1.3.10',
+            'org.apache.struts:struts-el:1.3.10',
+            'org.apache.struts:struts-extras:1.3.10',
+    )
+
+    // Solrj
+    compile(
+            'org.slf4j:slf4j-api:1.6.1',
+            'org.slf4j:slf4j-log4j12:1.6.1',
+            'org.apache.solr:solr-solrj:4.4.0',
+    )
+
+    // Solr Core
+    compile('org.apache.solr:solr-core:4.4.0') {
+        exclude group: 'org.slf4j', module: 'slf4j-jdk14'
+    }
+
+    // Test関係
+    testCompile(
+            'junit:junit:4.1.1',
+    )
+
+}
+</code></pre>
+
+<p>}</p>
+
+<p>/<em>*
+ * 管理サイト
+ </em>/
+project(&lsquo;:admin&rsquo;) {</p>
+
+<pre><code>apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: 'eclipse-wtp'
+apply plugin: 'war'
+
+// WARファイル名
+archivesBaseName = 'admin'
+
+dependencies {
+
+    compile project(':base')
+
+}
+
+eclipse {
+
+    // Dynamic Web Projectの設定
+    wtp {
+
+        component {
+
+            // EclipseのWTPで起動する場合のコンテキストパス
+            contextPath = '/admin'
+
+        }
+
+        facet {
+
+            facet name: 'java', version: getProperty('java.version')
+            facet name: 'jst.web', version: getProperty('java.servlet.version')
+
+        }
+
+    }
+
+}
+</code></pre>
+
+<p>}
+```
+上記の例では、base プロジェクトに eclipse-wtp の指定がないことがわかります。
+EclipseのWTPで起動するのは WAR プロジェクトのみです。
+そのため、base プロジェクトのような通常のJavaプロジェクトは eclipse-wtp とは関係ないだろうと思いがちなのですが、
+ここが落とし穴で、依存関係となるプロジェクトも含めて eclipse-wtp のプラグイン指定を行わないと、
+たとえEclipse上でコンパイルエラーが出ていなくてもWTP起動時に読み込みの対象とならないのです。
+なので、EclipseのWTPで起動させる場合は必ず WAR プロジェクト以外のプロジェクトにも eclipse-wtp のプラグインを読み込むよう指定してください。
+(subprojects のブロックで指定すれば各プロジェクトごとにいちいち指定する必要がなくなるので記述量が減ります)</p>
+
+<h2>03. プロパティの参照が出来ない場合がある</h2>
+
+
+<p>主にGradleで利用するプロパティは gradle.properties に記述する方法や、
+コマンド実行時に -P オプションで指定するのが一般的です。
+そのプロパティをスクリプト内で参照する場合、以下の 2 つの参照方法があります。</p>
+
+<p>1. プロパティ名の先頭に $ をつけてダブルクォーテーションで囲む<br>
+2. getPropertyメソッドにプロパティ名を指定して取得する<br></p>
+
+<p>記述が短いので $ をつけて参照する方法を選んでしまいがちですが、
+以下のようにドットやハイフンを含むプロパティ名の場合は参照できません。</p>
+
+<pre>
+× java.version=1.6
+× java-version=1.6
+○ java_version=1.6
+</pre>
+
+
+<p>これは Bash をはじめとしたシェルスクリプトと同じ仕様です。
+Javaのpropertiesファイルは慣例的にドット区切りでプロパティ名を記述する傾向があります。
+なので少なからずこの問題に陥る方もいらっしゃるかと思います。</p>
+
+<p>じゃあ、ドットやハイフンを使った名前は利用できないのか？というと、そういうわけではありません。
+上記の 2 の方法である getPropertyメソッドを利用すればドットやハイフンを含んだプロパティ名を参照できます。</p>
+
+<p>そのため、私が普段スクリプトを記述する場合は、
+コマンド実行時に -P オプションで指定したプロパティは 1 の方法で参照するようにし、
+gradle.properties で指定されたプロパティは 2 の方法で参照するように区別しています。
+その方がスクリプトを見たときにどこから指定されたプロパティを参照しようとしているのかが判断しやすいです。</p>
+
+<h2>04. hasPropertyメソッドが常に false を返してしまう</h2>
+
+
+<p>これもGradle初心者は陥りやすいかと思います。
+-P オプションでプロパティをしている場合で、
+かつそのプロパティが必須ではない場合、プロパティの有無をスクリプト内で判断しないとエラーになってしまいます。
+そこで、以下のように書いてみます。</p>
+
+<p>``` groovy
+def     test</p>
+
+<p>// 使用するプロファイル名が指定されている場合
+if (hasProperty(&lsquo;propertyTest&rsquo;)) {</p>
+
+<pre><code>// 使用するプロファイル名を設定する
+test = "$propertyTest"
+</code></pre>
+
+<p>} else {</p>
+
+<pre><code>// デフォルトのプロファイル名を設定する
+test = 'defaultTest'
+</code></pre>
+
+<p>}
+```</p>
+
+<p>この場合、常に hasProperty メソッドは失敗してしまいます。
+hasPropertyメソッドを何も指定せずに呼び出すと TaskのhasPropertyメソッドがコールされてしまい、
+実際にプロジェクトに設定されたプロパティを判断できなくなる場合があります。
+そこで、以下のように指定すると正常に判定することが出来ます。</p>
+
+<p>``` groovy
+def     test</p>
+
+<p>// 使用するプロファイル名が指定されている場合
+if (project.hasProperty(&lsquo;propertyTest&rsquo;)) {</p>
+
+<pre><code>// 使用するプロファイル名を設定する
+test = "$propertyTest"
+</code></pre>
+
+<p>} else {</p>
+
+<pre><code>// デフォルトのプロファイル名を設定する
+test = 'defaultTest'
+</code></pre>
+
+<p>}
+```</p>
+
+<p>上記のように「project.hasProperty」をコールすることで正常にプロパティ有無を判定することが出来るようになります。</p>
+
+<h2>05. 環境ごとにリソースファイルを切り替えたい</h2>
+
+
+<p>Mavenでは使用するリソースファイルを複数指定することが可能で、
+更にはビルド時にプロファイルを指定することでそれを環境ごとに切り替えることが出来ます。
+これをGradleで実現するには様々な方法がありますが、ここでは私が普段利用しているスクリプト例を紹介します。</p>
+
+<p>``` groovy
+/<em>*
+ * Gradleによるプロジェクトビルドスクリプト。
+ *
+ * @author Kou
+ </em>/
+apply plugin: &lsquo;eclipse&rsquo;
+apply plugin: &lsquo;idea&rsquo;</p>
+
+<p>/<em>*
+ * サブプロジェクト全体の共通設定。
+ *
+ </em>/
+subprojects {</p>
+
+<pre><code>apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'eclipse-wtp'
+apply plugin: 'idea'
+
+sourceSets {
+
+    def     useProfileName     // 指定環境名称
+
+    // 使用するプロファイル名が指定されている場合
+    if (project.hasProperty('profileName')) {
+
+        // 使用するプロファイル名を設定する
+        useProfileName = "$profileName"
+
+    } else {
+
+        // デフォルトのプロファイル名を設定する
+        useProfileName = 'local'
+
+    }
+
+
+    // メインリソースの指定
+    main.resources {
+
+        srcDirs 'src/main/resources'
+        srcDirs "src/profile.$useProfileName/resources"
+
+    }
+
+}
+
+eclipse {
+
+    classpath.defaultOutputDir = file('/target/classes')                // クラスファイル出力先
+
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>上記の「sourceSets」のブロック内がリソースを環境ごとに切り替える処理になります。
+この build.gradle のプロジェクト設定は前回も紹介したとおりIDEでも利用される設定となります。
+そのため、ここでは環境指定が無い場合はローカル環境の設定であるものと見なしています。</p>
+
+<p>では、他の環境指定を行うにはいつ行えばいいのかというと、これはビルド時に指定します。
+WARやJARのビルドを行うときに -P オプションでプロパティを与えて読み込む環境を指定します。</p>
+
+<p><code>groovy
+gradle --daemon -PprofileName=development war
+</code></p>
+
+<p>こうすることで、「src/main/resources」「src/profile.development/resources」ディレクトリにあるリソースファイルが
+WARに追加されるようになります。</p>
+
+<h2>06. testCompileで依存関係となるプロジェクトを指定した場合にそのプロジェクトの testCompile を参照してくれない</h2>
+
+
+<p>これはどうやら仕様(？)のようで、
+compileの場合は「compile project(&lsquo;:base&rsquo;)」といったようにプロジェクトを指定するとその指定したプロジェクトの依存関係を継承しますが、
+testCompileの場合は「testCompile project(&lsquo;:base&rsquo;)」と指定しても、どういうわけか継承しないようです。
+この問題に対するスマートな解決方法というのは現時点ではあまりないのですが、
+強いてあげるとすれば、以下のように各プロジェクトごとに testCompile の依存関係を指定してあげることで
+ある程度管理しやすくなります。</p>
+
+<p>``` groovy
+/<em>*
+ * Gradleによるプロジェクトビルドスクリプト。
+ *
+ * @author Kou
+ </em>/
+apply plugin: &lsquo;eclipse&rsquo;
+apply plugin: &lsquo;idea&rsquo;</p>
+
+<p>/<em>*
+ * 依存関係を定義する
+ </em>/
+ext {</p>
+
+<pre><code>libs = {
+
+    // テストで利用する依存関係
+    testCompile: [
+        'junit:junit:4.4',
+        'org.easymock:easymock:3.2',
+        'org.hamcrest:hamcrest-all:1.3',
+    ],
+
+}
+</code></pre>
+
+<p>}</p>
+
+<p>/<em>*
+ * ベースロジック
+ </em>/
+project(&lsquo;:base&rsquo;) {</p>
+
+<pre><code>dependencies {
+
+    // Test関係
+    testCompile libs.testCompile
+
+}
+</code></pre>
+
+<p>}</p>
+
+<p>/<em>*
+ * 管理サイト
+ </em>/
+project(&lsquo;:admin&rsquo;) {</p>
+
+<pre><code>apply plugin: 'war'
+
+// WARファイル名
+archivesBaseName = 'admin'
+
+dependencies {
+
+    compile project(':base')
+
+    // Test関係
+    testCompile libs.testCompile
+
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>このように、拡張プロパティでテストの依存関係をまとめた変数を宣言し、
+そこに利用する依存関係を全て記述すれば比較的管理のしやすい記述ができます。
+これについてはもっとスマートな記述方法が今後登場しましたらそのときに再度紹介させていただきます。</p>
+
+<h2>07. 複数のMavenリポジトリを定義する</h2>
+
+
+<p>参照するMavenリポジトリは repositories ブロック内で以下のように定義します。</p>
+
+<p>``` groovy
+/<em>*
+ * サブプロジェクト全体の共通設定。
+ *
+ </em>/
+subprojects {</p>
+
+<pre><code>apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'eclipse-wtp'
+apply plugin: 'idea'
+
+repositories {
+
+    maven {
+
+        url getProperty('project.maven.repository.url.01')
+
+    }
+    mavenCentral()
+
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>任意のリポジトリを複数定義する場合は、mavenブロックに url パラメータを複数記述するかと思いがちですが、
+そのような記述は出来ません。
+以下のように記述します。</p>
+
+<p>``` groovy
+/<em>*
+ * サブプロジェクト全体の共通設定。
+ *
+ </em>/
+subprojects {</p>
+
+<pre><code>apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'eclipse-wtp'
+apply plugin: 'idea'
+
+repositories {
+
+    maven {
+
+        url getProperty('project.maven.repository.url.01')
+
+    }
+    maven {
+
+        url getProperty('project.maven.repository.url.02')
+
+    }
+    mavenCentral()
+
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>上記のように、mavenブロックを複数宣言</p>
+
+<h2>08. アーカイブタスクで exclude 指定が効かない</h2>
+
+
+<p>これも人によってはAntやMavenのときの記述に慣れてしまっているが故に勘違いしてしまいがちなのですが、
+Zipなどのアーカイブタスクで exclude 指定をした場合に効かないように見えてしまう場合が有ります。</p>
+
+<p>例として、前回紹介したbatchのパッケージを作成するタスクにおいて一部のファイルをZIPファイルへ含めないようにしたいと思います。</p>
+
+<p>``` groovy
+/<em>*
+ * バッチ
+ </em>/
+project(&lsquo;:batch&rsquo;) {</p>
+
+<pre><code>/**
+ * リリース用パッケージの作成を行う。
+ *
+ */
+task distribution(dependsOn: 'jar', type: Zip) {
+
+    into ('batch/bin') {
+
+        from 'bin'
+        exclude 'bin/test.sh'   // test.sh を除去する指定
+
+    }
+
+
+    into ('batch/libs') {
+
+        from 'build/libs/batch.jar'
+        from configurations.compile
+
+    }
+
+
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>上記では、binディレクトリの中身にある test.sh のコピーを除去する想定で記述しました。
+しかし、実際にこの状態でアーカイブを作成すると、 test.sh ファイルはZIPの中に含まれてしまいます。
+AntやMavenの場合だと、exclude の指定を行えばそれだけで対象となるパスのファイルが除去されましたが、
+Gradleの場合だと、以下のように指定する必要があります。</p>
+
+<p>``` groovy
+/<em>*
+ * バッチ
+ </em>/
+project(&lsquo;:batch&rsquo;) {</p>
+
+<pre><code>/**
+ * リリース用パッケージの作成を行う。
+ *
+ */
+task distribution(dependsOn: 'jar', type: Zip) {
+
+    into ('batch/bin') {
+
+        from ('bin') {
+
+            exclude 'test.sh'   // test.sh を除去する指定
+
+        }
+
+    }
+
+
+    into ('batch/libs') {
+
+        from 'build/libs/batch.jar'
+        from configurations.compile
+
+    }
+
+
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>上記のように記述することで bin/test.sh ファイルをコピーしないようになります。
+Gradleのアーカイブタスクにおける exclude 指定は、このようにコピーする対象となるディレクトリの from ブロック内に exclude 指定を記述する必要があります。</p>
+
+<h2>09. ブランチ切り替えを頻繁に行った場合に他のブランチのクラスファイルが残る場合がある</h2>
+
+
+<p>これは主にJenkinsでJavaビルドを行う場合に起こることが多いのですが、JenkinsではジョブのSCMのブランチ切り替えを頻繁に行うかと思います。
+そうなると、例えばあるブランチにはあって、あるブランチにはないクラスファイルというものが当然のように出てきます。
+そして、そのクラスファイルの一部が残ることでビルドエラーが発生する場合があります。
+これを回避するには、以下のように「clean」タスクをビルド前に実行するように指定することで回避することが出来ます。(尤も、これはGradleに限らずMavenでも同じです)</p>
+
+<p><code>groovy
+gradle --daemon clean war
+</code></p>
+
+<p>clean タスクを実行すると更新する必要がないクラスも再コンパイルするようになってしまいますので、
+ブランチ切り替えを行わないような例では開発スピードをあげるために、あえて clean を指定しないというのも手かと思います。
+とはいえ、本番環境へリリースするWARやJARをビルドする場合は、万が一のことを考えて clean タスクを指定してビルドすることをお勧めします。</p>
+
+<h2>10. 突然動作がおかしくなった場合にキャッシュをクリアする方法</h2>
+
+
+<p>例えば、MavenリポジトリのURLを変更したなど、
+さまざまな理由でキャッシュが残った場合に動作がおかしくなってエラーが発生する場合が有ります。
+その場合、Gradleの作業用ディレクトリを削除すれば正常に動作する場合が有ります。
+ユーザのホームディレクトリにある「.gradle」というディレクトリを削除することでキャッシュをクリアすることが出来ます。
+ただしこの場合、Mavenの依存関係を一から取得し直しになるために、初回のビルド時に時間がかかります。
+あくまで原因不明のエラー回復のための最終手段と思ってください。</p>
+
+<h2>まとめ</h2>
+
+
+<p>今回は私がGradleを利用した上でハマるであろうと考えたポイントを 10 個紹介させていただきました。
+AntやMavenに慣れた人たちからすると、Gradleは最初のうちは少々取っ付きにくいものであるため、
+このようにいくつかハマってしまうポイントが発生します。
+Gradleをこれから使ってみようと思う皆様の参考になれば幸いです。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Gradleによるビルドとパッケージ作成]]></title>
@@ -115,9 +715,8 @@ task distribution(dependsOn: 'jar', type: Zip) {
 }
 </code></pre>
 
-<p>}</p>
-
-<p>```</p>
+<p>}
+```</p>
 
 <p>上記にある distribution というタスクが新しく追加したタスクになります。
 「type: Zip」という指定からもわかるように、このタスクではZIPファイルを作成します。

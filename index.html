@@ -9,12 +9,8 @@
   <meta name="author" content="kkoudev">
 
   
-  <meta name="description" content="前回の続きです。
-Gradleのプロジェクトの設定が終わっただけでは当然ながら終わりません。
-次はビルドが必要になります。
-プロジェクト構成は前回の例をそのまま踏襲するとして、
-実際にビルドをするときのコマンドを紹介します。 WARとJARのビルド WARのビルドは以下のコマンドで行います。
-( &hellip;">
+  <meta name="description" content="今回はGradleでよくハマるであろうポイントを集めたTIPSを10個紹介します。 01. 依存関係のバージョンが指定されたものにならない MavenからGradleへ移行した場合、おそらく誰もが最初に陥る問題かと思います。
+端的に言うと、Mavenの pom.xml &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -69,6 +65,984 @@ Gradleのプロジェクトの設定が終わっただけでは当然ながら�
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/03/29/gradle-tips/">Gradleで陥りやすい問題点の解決策TIPS集</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-03-29T11:43:49+09:00" pubdate data-updated="true">Mar 29<span>th</span>, 2014</time>
+        
+         | <a href="/blog/2014/03/29/gradle-tips/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>今回はGradleでよくハマるであろうポイントを集めたTIPSを10個紹介します。</p>
+
+<h2>01. 依存関係のバージョンが指定されたものにならない</h2>
+
+
+<p>MavenからGradleへ移行した場合、おそらく誰もが最初に陥る問題かと思います。
+端的に言うと、Mavenの pom.xml で指定したままの依存関係の設定をそのまま build.gradle へ移したとしても
+最終的に取得される依存関係は殆どのケースで同じにはなりません。
+これは「<strong>推移的依存関係</strong>」によって同じライブラリが存在した場合に優先されるバージョンがMavenとGradleでは異なるために起こります。</p>
+
+<p>推移的依存関係とは簡単に説明すると、ある依存関係がさらに依存する関係のことを言います。
+MavenでもGradleでもそれらを自動的に取得しようとしますが、
+それらの中で使っている依存関係のgroupIdもartifactIdも同じだがバージョンが異なる場合、
+Javaでは同じライブラリの異なるバージョンを同じアプリ内へ共存させることが出来ませんから、
+どちらかを優先させる必要が出てきます。</p>
+
+<p>Mavenの場合は推移的依存関係における階層が高い方が優先されます。
+しかしGradleでは、<strong><font color="red">バージョンが一番高いものが優先されます。</font></strong>
+そのため、Gradleでは利用しない依存関係をひたすら exclude 指定で除外していく必要が出てきます。</p>
+
+<p>MavenからGradleへ移行する場合に依存関係のバージョンを含めて全く同じにしたい場合は、
+以下のように現在の依存関係の階層構造を出力してそれを比較して合わせていけばよいです。</p>
+
+<p>＜Mavenで依存関係階層構造を出力＞</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c"># 対象となるプロジェクトの pom.xml のあるディレクトリへ移動して実行</span>
+</span><span class='line'>mvn dependency:tree
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>＜Gradleで依存関係階層構造を出力＞</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c"># baseプロジェクトの依存関係階層構造を出力する</span>
+</span><span class='line'>gradle :base:dependencies
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>とはいえ、これがとにかく面倒です。
+例えば自身で dependencies ブロックへ指定した依存関係が他の依存関係の推移的依存関係になっている場合、
+exclude指定を行っても一見除去されないように見えたり(or 指定したバージョンにならなかったり)と、結構ハマります。
+根気よく exclude 指定で不要なバージョンを除去して合わせていきましょう。</p>
+
+<h2>02. EclipseのWTPで起動した場合に他のプロジェクトを参照しているとその参照しているプロジェクトの依存関係を読み込まない</h2>
+
+
+<p>これも人によってはハマるポイントかと思います。
+Eclipse上ではコンパイルエラーが出ていないのに、WTPでTomcatを起動すると参照しているプロジェクトの依存関係が無いと言われてしまう(ClassNotFoundExceptionが発生してしまう)現象です。
+これは eclipse-wtp のプラグインの読み込み指定を行っていない場合に起こります。
+どういうことなのかと言いますと、この例が起こるのは以下のように build.gradle を記述したときに起こります。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+<span class='line-number'>63</span>
+<span class='line-number'>64</span>
+<span class='line-number'>65</span>
+<span class='line-number'>66</span>
+<span class='line-number'>67</span>
+<span class='line-number'>68</span>
+<span class='line-number'>69</span>
+<span class='line-number'>70</span>
+<span class='line-number'>71</span>
+<span class='line-number'>72</span>
+<span class='line-number'>73</span>
+<span class='line-number'>74</span>
+<span class='line-number'>75</span>
+<span class='line-number'>76</span>
+<span class='line-number'>77</span>
+<span class='line-number'>78</span>
+<span class='line-number'>79</span>
+<span class='line-number'>80</span>
+<span class='line-number'>81</span>
+<span class='line-number'>82</span>
+<span class='line-number'>83</span>
+<span class='line-number'>84</span>
+<span class='line-number'>85</span>
+<span class='line-number'>86</span>
+<span class='line-number'>87</span>
+<span class='line-number'>88</span>
+<span class='line-number'>89</span>
+<span class='line-number'>90</span>
+<span class='line-number'>91</span>
+<span class='line-number'>92</span>
+<span class='line-number'>93</span>
+<span class='line-number'>94</span>
+<span class='line-number'>95</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * Gradleによるプロジェクトビルドスクリプト。</span>
+</span><span class='line'><span class="cm"> *</span>
+</span><span class='line'><span class="cm"> * @author Kou</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;eclipse&#39;</span>
+</span><span class='line'><span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;idea&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * ベースロジック</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;java&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;eclipse&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;idea&#39;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">dependencies</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// Struts</span>
+</span><span class='line'>        <span class="n">compile</span><span class="o">(</span>
+</span><span class='line'>                <span class="s1">&#39;taglibs:standard:1.1.2&#39;</span><span class="o">,</span>
+</span><span class='line'>                <span class="s1">&#39;org.apache.struts:struts-core:1.3.10&#39;</span><span class="o">,</span>
+</span><span class='line'>                <span class="s1">&#39;org.apache.struts:struts-tiles:1.3.10&#39;</span><span class="o">,</span>
+</span><span class='line'>                <span class="s1">&#39;org.apache.struts:struts-taglib:1.3.10&#39;</span><span class="o">,</span>
+</span><span class='line'>                <span class="s1">&#39;org.apache.struts:struts-el:1.3.10&#39;</span><span class="o">,</span>
+</span><span class='line'>                <span class="s1">&#39;org.apache.struts:struts-extras:1.3.10&#39;</span><span class="o">,</span>
+</span><span class='line'>        <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// Solrj</span>
+</span><span class='line'>        <span class="n">compile</span><span class="o">(</span>
+</span><span class='line'>                <span class="s1">&#39;org.slf4j:slf4j-api:1.6.1&#39;</span><span class="o">,</span>
+</span><span class='line'>                <span class="s1">&#39;org.slf4j:slf4j-log4j12:1.6.1&#39;</span><span class="o">,</span>
+</span><span class='line'>                <span class="s1">&#39;org.apache.solr:solr-solrj:4.4.0&#39;</span><span class="o">,</span>
+</span><span class='line'>        <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// Solr Core</span>
+</span><span class='line'>        <span class="n">compile</span><span class="o">(</span><span class="s1">&#39;org.apache.solr:solr-core:4.4.0&#39;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>            <span class="n">exclude</span> <span class="nl">group:</span> <span class="s1">&#39;org.slf4j&#39;</span><span class="o">,</span> <span class="nl">module:</span> <span class="s1">&#39;slf4j-jdk14&#39;</span>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// Test関係</span>
+</span><span class='line'>        <span class="n">testCompile</span><span class="o">(</span>
+</span><span class='line'>                <span class="s1">&#39;junit:junit:4.1.1&#39;</span><span class="o">,</span>
+</span><span class='line'>        <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * 管理サイト</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">project</span><span class="o">(</span><span class="s1">&#39;:admin&#39;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;java&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;eclipse&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;idea&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;eclipse-wtp&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;war&#39;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// WARファイル名</span>
+</span><span class='line'>    <span class="n">archivesBaseName</span> <span class="o">=</span> <span class="s1">&#39;admin&#39;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">dependencies</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">compile</span> <span class="nf">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">eclipse</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// Dynamic Web Projectの設定</span>
+</span><span class='line'>        <span class="n">wtp</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="n">component</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>                <span class="c1">// EclipseのWTPで起動する場合のコンテキストパス</span>
+</span><span class='line'>                <span class="n">contextPath</span> <span class="o">=</span> <span class="s1">&#39;/admin&#39;</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="n">facet</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>                <span class="n">facet</span> <span class="nl">name:</span> <span class="s1">&#39;java&#39;</span><span class="o">,</span> <span class="nl">version:</span> <span class="n">getProperty</span><span class="o">(</span><span class="s1">&#39;java.version&#39;</span><span class="o">)</span>
+</span><span class='line'>                <span class="n">facet</span> <span class="nl">name:</span> <span class="s1">&#39;jst.web&#39;</span><span class="o">,</span> <span class="nl">version:</span> <span class="n">getProperty</span><span class="o">(</span><span class="s1">&#39;java.servlet.version&#39;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>上記の例では、base プロジェクトに eclipse-wtp の指定がないことがわかります。
+EclipseのWTPで起動するのは WAR プロジェクトのみです。
+そのため、base プロジェクトのような通常のJavaプロジェクトは eclipse-wtp とは関係ないだろうと思いがちなのですが、
+ここが落とし穴で、依存関係となるプロジェクトも含めて eclipse-wtp のプラグイン指定を行わないと、
+たとえEclipse上でコンパイルエラーが出ていなくてもWTP起動時に読み込みの対象とならないのです。
+なので、EclipseのWTPで起動させる場合は必ず WAR プロジェクト以外のプロジェクトにも eclipse-wtp のプラグインを読み込むよう指定してください。
+(subprojects のブロックで指定すれば各プロジェクトごとにいちいち指定する必要がなくなるので記述量が減ります)</p>
+
+<h2>03. プロパティの参照が出来ない場合がある</h2>
+
+
+<p>主にGradleで利用するプロパティは gradle.properties に記述する方法や、
+コマンド実行時に -P オプションで指定するのが一般的です。
+そのプロパティをスクリプト内で参照する場合、以下の 2 つの参照方法があります。</p>
+
+<p>1. プロパティ名の先頭に $ をつけてダブルクォーテーションで囲む<br>
+2. getPropertyメソッドにプロパティ名を指定して取得する<br></p>
+
+<p>記述が短いので $ をつけて参照する方法を選んでしまいがちですが、
+以下のようにドットやハイフンを含むプロパティ名の場合は参照できません。</p>
+
+<pre>
+× java.version=1.6
+× java-version=1.6
+○ java_version=1.6
+</pre>
+
+
+<p>これは Bash をはじめとしたシェルスクリプトと同じ仕様です。
+Javaのpropertiesファイルは慣例的にドット区切りでプロパティ名を記述する傾向があります。
+なので少なからずこの問題に陥る方もいらっしゃるかと思います。</p>
+
+<p>じゃあ、ドットやハイフンを使った名前は利用できないのか？というと、そういうわけではありません。
+上記の 2 の方法である getPropertyメソッドを利用すればドットやハイフンを含んだプロパティ名を参照できます。</p>
+
+<p>そのため、私が普段スクリプトを記述する場合は、
+コマンド実行時に -P オプションで指定したプロパティは 1 の方法で参照するようにし、
+gradle.properties で指定されたプロパティは 2 の方法で参照するように区別しています。
+その方がスクリプトを見たときにどこから指定されたプロパティを参照しようとしているのかが判断しやすいです。</p>
+
+<h2>04. hasPropertyメソッドが常に false を返してしまう</h2>
+
+
+<p>これもGradle初心者は陥りやすいかと思います。
+-P オプションでプロパティをしている場合で、
+かつそのプロパティが必須ではない場合、プロパティの有無をスクリプト内で判断しないとエラーになってしまいます。
+そこで、以下のように書いてみます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="kt">def</span>     <span class="n">test</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// 使用するプロファイル名が指定されている場合</span>
+</span><span class='line'><span class="k">if</span> <span class="o">(</span><span class="n">hasProperty</span><span class="o">(</span><span class="s1">&#39;propertyTest&#39;</span><span class="o">))</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// 使用するプロファイル名を設定する</span>
+</span><span class='line'>    <span class="n">test</span> <span class="o">=</span> <span class="s2">&quot;$propertyTest&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// デフォルトのプロファイル名を設定する</span>
+</span><span class='line'>    <span class="n">test</span> <span class="o">=</span> <span class="s1">&#39;defaultTest&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>この場合、常に hasProperty メソッドは失敗してしまいます。
+hasPropertyメソッドを何も指定せずに呼び出すと TaskのhasPropertyメソッドがコールされてしまい、
+実際にプロジェクトに設定されたプロパティを判断できなくなる場合があります。
+そこで、以下のように指定すると正常に判定することが出来ます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="kt">def</span>     <span class="n">test</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// 使用するプロファイル名が指定されている場合</span>
+</span><span class='line'><span class="k">if</span> <span class="o">(</span><span class="n">project</span><span class="o">.</span><span class="na">hasProperty</span><span class="o">(</span><span class="s1">&#39;propertyTest&#39;</span><span class="o">))</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// 使用するプロファイル名を設定する</span>
+</span><span class='line'>    <span class="n">test</span> <span class="o">=</span> <span class="s2">&quot;$propertyTest&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// デフォルトのプロファイル名を設定する</span>
+</span><span class='line'>    <span class="n">test</span> <span class="o">=</span> <span class="s1">&#39;defaultTest&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>上記のように「project.hasProperty」をコールすることで正常にプロパティ有無を判定することが出来るようになります。</p>
+
+<h2>05. 環境ごとにリソースファイルを切り替えたい</h2>
+
+
+<p>Mavenでは使用するリソースファイルを複数指定することが可能で、
+更にはビルド時にプロファイルを指定することでそれを環境ごとに切り替えることが出来ます。
+これをGradleで実現するには様々な方法がありますが、ここでは私が普段利用しているスクリプト例を紹介します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * Gradleによるプロジェクトビルドスクリプト。</span>
+</span><span class='line'><span class="cm"> *</span>
+</span><span class='line'><span class="cm"> * @author Kou</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;eclipse&#39;</span>
+</span><span class='line'><span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;idea&#39;</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * サブプロジェクト全体の共通設定。</span>
+</span><span class='line'><span class="cm"> *</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">subprojects</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;java&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;eclipse&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;eclipse-wtp&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;idea&#39;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">sourceSets</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="kt">def</span>     <span class="n">useProfileName</span>     <span class="c1">// 指定環境名称</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// 使用するプロファイル名が指定されている場合</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">(</span><span class="n">project</span><span class="o">.</span><span class="na">hasProperty</span><span class="o">(</span><span class="s1">&#39;profileName&#39;</span><span class="o">))</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="c1">// 使用するプロファイル名を設定する</span>
+</span><span class='line'>            <span class="n">useProfileName</span> <span class="o">=</span> <span class="s2">&quot;$profileName&quot;</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span> <span class="k">else</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="c1">// デフォルトのプロファイル名を設定する</span>
+</span><span class='line'>            <span class="n">useProfileName</span> <span class="o">=</span> <span class="s1">&#39;local&#39;</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// メインリソースの指定</span>
+</span><span class='line'>        <span class="n">main</span><span class="o">.</span><span class="na">resources</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="n">srcDirs</span> <span class="s1">&#39;src/main/resources&#39;</span>
+</span><span class='line'>            <span class="n">srcDirs</span> <span class="s2">&quot;src/profile.$useProfileName/resources&quot;</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">eclipse</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">classpath</span><span class="o">.</span><span class="na">defaultOutputDir</span> <span class="o">=</span> <span class="n">file</span><span class="o">(</span><span class="s1">&#39;/target/classes&#39;</span><span class="o">)</span>                <span class="c1">// クラスファイル出力先</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>上記の「sourceSets」のブロック内がリソースを環境ごとに切り替える処理になります。
+この build.gradle のプロジェクト設定は前回も紹介したとおりIDEでも利用される設定となります。
+そのため、ここでは環境指定が無い場合はローカル環境の設定であるものと見なしています。</p>
+
+<p>では、他の環境指定を行うにはいつ行えばいいのかというと、これはビルド時に指定します。
+WARやJARのビルドを行うときに -P オプションでプロパティを与えて読み込む環境を指定します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="n">gradle</span> <span class="o">--</span><span class="n">daemon</span> <span class="o">-</span><span class="n">PprofileName</span><span class="o">=</span><span class="n">development</span> <span class="n">war</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>こうすることで、「src/main/resources」「src/profile.development/resources」ディレクトリにあるリソースファイルが
+WARに追加されるようになります。</p>
+
+<h2>06. testCompileで依存関係となるプロジェクトを指定した場合にそのプロジェクトの testCompile を参照してくれない</h2>
+
+
+<p>これはどうやら仕様(？)のようで、
+compileの場合は「compile project(&lsquo;:base&rsquo;)」といったようにプロジェクトを指定するとその指定したプロジェクトの依存関係を継承しますが、
+testCompileの場合は「testCompile project(&lsquo;:base&rsquo;)」と指定しても、どういうわけか継承しないようです。
+この問題に対するスマートな解決方法というのは現時点ではあまりないのですが、
+強いてあげるとすれば、以下のように各プロジェクトごとに testCompile の依存関係を指定してあげることで
+ある程度管理しやすくなります。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+<span class='line-number'>58</span>
+<span class='line-number'>59</span>
+<span class='line-number'>60</span>
+<span class='line-number'>61</span>
+<span class='line-number'>62</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * Gradleによるプロジェクトビルドスクリプト。</span>
+</span><span class='line'><span class="cm"> *</span>
+</span><span class='line'><span class="cm"> * @author Kou</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;eclipse&#39;</span>
+</span><span class='line'><span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;idea&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * 依存関係を定義する</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">ext</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">libs</span> <span class="o">=</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// テストで利用する依存関係</span>
+</span><span class='line'>        <span class="nl">testCompile:</span> <span class="o">[</span>
+</span><span class='line'>            <span class="s1">&#39;junit:junit:4.4&#39;</span><span class="o">,</span>
+</span><span class='line'>            <span class="s1">&#39;org.easymock:easymock:3.2&#39;</span><span class="o">,</span>
+</span><span class='line'>            <span class="s1">&#39;org.hamcrest:hamcrest-all:1.3&#39;</span><span class="o">,</span>
+</span><span class='line'>        <span class="o">],</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * ベースロジック</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">dependencies</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// Test関係</span>
+</span><span class='line'>        <span class="n">testCompile</span> <span class="n">libs</span><span class="o">.</span><span class="na">testCompile</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * 管理サイト</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">project</span><span class="o">(</span><span class="s1">&#39;:admin&#39;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;war&#39;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c1">// WARファイル名</span>
+</span><span class='line'>    <span class="n">archivesBaseName</span> <span class="o">=</span> <span class="s1">&#39;admin&#39;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">dependencies</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">compile</span> <span class="nf">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c1">// Test関係</span>
+</span><span class='line'>        <span class="n">testCompile</span> <span class="n">libs</span><span class="o">.</span><span class="na">testCompile</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>このように、拡張プロパティでテストの依存関係をまとめた変数を宣言し、
+そこに利用する依存関係を全て記述すれば比較的管理のしやすい記述ができます。
+これについてはもっとスマートな記述方法が今後登場しましたらそのときに再度紹介させていただきます。</p>
+
+<h2>07. 複数のMavenリポジトリを定義する</h2>
+
+
+<p>参照するMavenリポジトリは repositories ブロック内で以下のように定義します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * サブプロジェクト全体の共通設定。</span>
+</span><span class='line'><span class="cm"> *</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">subprojects</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;java&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;eclipse&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;eclipse-wtp&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;idea&#39;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">repositories</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">maven</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="n">url</span> <span class="nf">getProperty</span><span class="o">(</span><span class="s1">&#39;project.maven.repository.url.01&#39;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>        <span class="n">mavenCentral</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>任意のリポジトリを複数定義する場合は、mavenブロックに url パラメータを複数記述するかと思いがちですが、
+そのような記述は出来ません。
+以下のように記述します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * サブプロジェクト全体の共通設定。</span>
+</span><span class='line'><span class="cm"> *</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">subprojects</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;java&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;eclipse&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;eclipse-wtp&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;idea&#39;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="n">repositories</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">maven</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="n">url</span> <span class="nf">getProperty</span><span class="o">(</span><span class="s1">&#39;project.maven.repository.url.01&#39;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>        <span class="n">maven</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="n">url</span> <span class="nf">getProperty</span><span class="o">(</span><span class="s1">&#39;project.maven.repository.url.02&#39;</span><span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>        <span class="n">mavenCentral</span><span class="o">()</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>上記のように、mavenブロックを複数宣言</p>
+
+<h2>08. アーカイブタスクで exclude 指定が効かない</h2>
+
+
+<p>これも人によってはAntやMavenのときの記述に慣れてしまっているが故に勘違いしてしまいがちなのですが、
+Zipなどのアーカイブタスクで exclude 指定をした場合に効かないように見えてしまう場合が有ります。</p>
+
+<p>例として、前回紹介したbatchのパッケージを作成するタスクにおいて一部のファイルをZIPファイルへ含めないようにしたいと思います。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * バッチ</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">project</span><span class="o">(</span><span class="s1">&#39;:batch&#39;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="cm">/**</span>
+</span><span class='line'><span class="cm">     * リリース用パッケージの作成を行う。</span>
+</span><span class='line'><span class="cm">     *</span>
+</span><span class='line'><span class="cm">     */</span>
+</span><span class='line'>    <span class="n">task</span> <span class="nf">distribution</span><span class="o">(</span><span class="nl">dependsOn:</span> <span class="s1">&#39;jar&#39;</span><span class="o">,</span> <span class="nl">type:</span> <span class="n">Zip</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">into</span> <span class="o">(</span><span class="s1">&#39;batch/bin&#39;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="n">from</span> <span class="s1">&#39;bin&#39;</span>
+</span><span class='line'>            <span class="n">exclude</span> <span class="s1">&#39;bin/test.sh&#39;</span>   <span class="c1">// test.sh を除去する指定</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">into</span> <span class="o">(</span><span class="s1">&#39;batch/libs&#39;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="n">from</span> <span class="s1">&#39;build/libs/batch.jar&#39;</span>
+</span><span class='line'>            <span class="n">from</span> <span class="n">configurations</span><span class="o">.</span><span class="na">compile</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>上記では、binディレクトリの中身にある test.sh のコピーを除去する想定で記述しました。
+しかし、実際にこの状態でアーカイブを作成すると、 test.sh ファイルはZIPの中に含まれてしまいます。
+AntやMavenの場合だと、exclude の指定を行えばそれだけで対象となるパスのファイルが除去されましたが、
+Gradleの場合だと、以下のように指定する必要があります。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * バッチ</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">project</span><span class="o">(</span><span class="s1">&#39;:batch&#39;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="cm">/**</span>
+</span><span class='line'><span class="cm">     * リリース用パッケージの作成を行う。</span>
+</span><span class='line'><span class="cm">     *</span>
+</span><span class='line'><span class="cm">     */</span>
+</span><span class='line'>    <span class="n">task</span> <span class="nf">distribution</span><span class="o">(</span><span class="nl">dependsOn:</span> <span class="s1">&#39;jar&#39;</span><span class="o">,</span> <span class="nl">type:</span> <span class="n">Zip</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">into</span> <span class="o">(</span><span class="s1">&#39;batch/bin&#39;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="n">from</span> <span class="o">(</span><span class="s1">&#39;bin&#39;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>                <span class="n">exclude</span> <span class="s1">&#39;test.sh&#39;</span>   <span class="c1">// test.sh を除去する指定</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">into</span> <span class="o">(</span><span class="s1">&#39;batch/libs&#39;</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="n">from</span> <span class="s1">&#39;build/libs/batch.jar&#39;</span>
+</span><span class='line'>            <span class="n">from</span> <span class="n">configurations</span><span class="o">.</span><span class="na">compile</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>上記のように記述することで bin/test.sh ファイルをコピーしないようになります。
+Gradleのアーカイブタスクにおける exclude 指定は、このようにコピーする対象となるディレクトリの from ブロック内に exclude 指定を記述する必要があります。</p>
+
+<h2>09. ブランチ切り替えを頻繁に行った場合に他のブランチのクラスファイルが残る場合がある</h2>
+
+
+<p>これは主にJenkinsでJavaビルドを行う場合に起こることが多いのですが、JenkinsではジョブのSCMのブランチ切り替えを頻繁に行うかと思います。
+そうなると、例えばあるブランチにはあって、あるブランチにはないクラスファイルというものが当然のように出てきます。
+そして、そのクラスファイルの一部が残ることでビルドエラーが発生する場合があります。
+これを回避するには、以下のように「clean」タスクをビルド前に実行するように指定することで回避することが出来ます。(尤も、これはGradleに限らずMavenでも同じです)</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="n">gradle</span> <span class="o">--</span><span class="n">daemon</span> <span class="n">clean</span> <span class="n">war</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>clean タスクを実行すると更新する必要がないクラスも再コンパイルするようになってしまいますので、
+ブランチ切り替えを行わないような例では開発スピードをあげるために、あえて clean を指定しないというのも手かと思います。
+とはいえ、本番環境へリリースするWARやJARをビルドする場合は、万が一のことを考えて clean タスクを指定してビルドすることをお勧めします。</p>
+
+<h2>10. 突然動作がおかしくなった場合にキャッシュをクリアする方法</h2>
+
+
+<p>例えば、MavenリポジトリのURLを変更したなど、
+さまざまな理由でキャッシュが残った場合に動作がおかしくなってエラーが発生する場合が有ります。
+その場合、Gradleの作業用ディレクトリを削除すれば正常に動作する場合が有ります。
+ユーザのホームディレクトリにある「.gradle」というディレクトリを削除することでキャッシュをクリアすることが出来ます。
+ただしこの場合、Mavenの依存関係を一から取得し直しになるために、初回のビルド時に時間がかかります。
+あくまで原因不明のエラー回復のための最終手段と思ってください。</p>
+
+<h2>まとめ</h2>
+
+
+<p>今回は私がGradleを利用した上でハマるであろうと考えたポイントを 10 個紹介させていただきました。
+AntやMavenに慣れた人たちからすると、Gradleは最初のうちは少々取っ付きにくいものであるため、
+このようにいくつかハマってしまうポイントが発生します。
+Gradleをこれから使ってみようと思う皆様の参考になれば幸いです。</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -1509,6 +2483,10 @@ LEFT JOINで結合し、WHERE句でIDが null かどうかを判定すること�
     <section>
   <h1>Recent Posts</h1>
   <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/03/29/gradle-tips/">Gradleで陥りやすい問題点の解決策TIPS集</a>
+      </li>
     
       <li class="post">
         <a href="/blog/2014/03/24/gradle_build/">Gradleによるビルドとパッケージ作成</a>
