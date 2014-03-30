@@ -4,7 +4,7 @@
   <title><![CDATA[猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-03-30T23:41:31+09:00</updated>
+  <updated>2014-03-30T23:47:00+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -309,7 +309,7 @@ gradle.properties で指定されたプロパティは 2 の方法で参照す�
 
 
 <p>これもGradle初心者は陥りやすいかと思います。
--P オプションでプロパティをしている場合で、
+-P オプションでプロパティを指定している場合で、
 かつそのプロパティが必須ではない場合、プロパティの有無をスクリプト内で判断しないとエラーになってしまいます。
 そこで、以下のように書いてみます。</p>
 
