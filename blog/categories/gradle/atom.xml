@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Gradle | 猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/blog/categories/gradle/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-03-30T23:49:56+09:00</updated>
+  <updated>2014-03-31T22:52:04+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -18,7 +18,7 @@
     <link href="http://kkoudev.github.io/blog/2014/03/30/gradle-tips/"/>
     <updated>2014-03-30T22:45:00+09:00</updated>
     <id>http://kkoudev.github.io/blog/2014/03/30/gradle-tips</id>
-    <content type="html"><![CDATA[<p>今回はGradleでよくハマるであろうポイントを集めたTIPSを10個紹介します。</p>
+    <content type="html"><![CDATA[<p>今回はGradleでよくハマるであろうポイントを集めたTIPSを11個紹介します。</p>
 
 <h2>01. 依存関係のバージョンが指定されたものにならない</h2>
 
@@ -420,7 +420,28 @@ dependencies {
 そこに利用する依存関係を全て記述すれば比較的管理のしやすい記述ができます。
 これについてはもっとスマートな記述方法が今後登場しましたらそのときに再度紹介させていただきます。</p>
 
-<h2>07. 複数のMavenリポジトリを定義する</h2>
+<h2>07. EclipseのWTPを利用している場合に provided や providedCompile の指定が効かない</h2>
+
+
+<p>これは以前紹介させて頂いたEclipseのGradleプラグインである「Gradle Integration for Eclipse」のプラグインの仕様のようで、
+このプラグインは自前で作成した provided の指定やWARプラグインを指定した場合のみ利用できる providedCompile の指定をしたとしても、
+WTPでAPサーバを起動したときに WEB-INF/lib のディレクトリへ強制的に全ての依存関係ライブラリがコピーされてしまいます。要は provided であることを考慮してくれません。
+この問題に対する公式な解決方法としては、Eclipseの設定から「Gradle」→「WTP」を選択し、そこに除去するプラグインを記述すれば WEB-INF/lib ディレクトリへコピーされなくなる、とのことです。
+せっかくGradleを利用しているのに手動で設定するという点からもなんとも落ちないですが…現状このプラグインを利用している以上はこうするしかないようです。</p>
+
+<p>もう１つの解決策としては、「Gradle Integration for Eclipse」プラグインでインポートせず、
+「gradle eclipse」コマンドを自前で実行してEclipseのプロジェクト設定ファイルを作成し、
+作成後のプロジェクトをインポートするという方法です。
+この方法であれば provided も考慮してプロジェクト設定を作成してくれます。
+ただし、手動でコマンドを実行しなければならないという点がなんともスマートではないことと、
+build.gradle を変更した場合(依存関係などを追加した場合)に再度コマンドを実行し直さなければなりません。
+「Gradle Integration for Eclipse」プラグインを利用している場合はこのあたりを自動でやってくれます。</p>
+
+<p>provided で除去するのは殆どの場合 servlet-api や jsp-api ですので、
+腑に落ちない気持ちはありつつも、「Gradle Integration for Eclipse」プラグインを使用し、
+Eclipseの設定で除去してしまう方法で利用していく方が無難かと思われます。</p>
+
+<h2>08. 複数のMavenリポジトリを定義する</h2>
 
 
 <p>参照するMavenリポジトリは repositories ブロック内で以下のように定義します。</p>
@@ -490,7 +511,7 @@ repositories {
 
 <p>上記のように、mavenブロックを複数宣言することでURLを複数指定できます。</p>
 
-<h2>08. アーカイブタスクで exclude 指定が効かない</h2>
+<h2>09. アーカイブタスクで exclude 指定が効かない</h2>
 
 
 <p>これも人によってはAntやMavenのときの記述に慣れてしまっているが故に勘違いしてしまいがちなのですが、
@@ -577,7 +598,7 @@ task distribution(dependsOn: 'jar', type: Zip) {
 <p>上記のように記述することで bin/test.sh ファイルをコピーしないようになります。
 Gradleのアーカイブタスクにおける exclude 指定は、このようにコピーする対象となるディレクトリの from ブロック内に exclude 指定を記述する必要があります。</p>
 
-<h2>09. ブランチ切り替えを頻繁に行った場合に他のブランチのクラスファイルが残る場合がある</h2>
+<h2>10. ブランチ切り替えを頻繁に行った場合に他のブランチのクラスファイルが残る場合がある</h2>
 
 
 <p>これは主にJenkinsでJavaビルドを行う場合に起こることが多いのですが、JenkinsではジョブのSCMのブランチ切り替えを頻繁に行うかと思います。
@@ -593,7 +614,7 @@ gradle --daemon clean war
 ブランチ切り替えを行わないような例では開発スピードをあげるために、あえて clean を指定しないというのも手かと思います。
 とはいえ、本番環境へリリースするWARやJARをビルドする場合は、万が一のことを考えて clean タスクを指定してビルドすることをお勧めします。</p>
 
-<h2>10. 突然動作がおかしくなった場合にキャッシュをクリアする方法</h2>
+<h2>11. 突然動作がおかしくなった場合にキャッシュをクリアする方法</h2>
 
 
 <p>例えば、MavenリポジトリのURLを変更したなど、
