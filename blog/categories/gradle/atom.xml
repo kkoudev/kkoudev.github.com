@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Gradle | 猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/blog/categories/gradle/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-03-31T22:56:33+09:00</updated>
+  <updated>2014-04-28T11:04:20+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -1370,6 +1370,10 @@ build.gradleの内容を解析してプロジェクトの作成をしてくれ�
 ここも手動でチェックをつけてあげる必要が出てきます。<br>
 13.1からは自動でartifactsやfacetも生成してくれますが、artifactsは複数プロジェクトに対応していないのかROOTコンテキストのプロジェクト分しか作成されません。<br>
 Gradle側のIntellij IDEA対応はあまり熱心ではないみたいなのでこの辺はいずれ対応してくれるであろうことを期待しましょう。<br></p>
+
+<p>【2014/04/28追記】
+Intellij IDEAでartifactsが作成されない不具合がEAP版の13.1 135.760で修正されました。
+早々に試したい方は<a href="http://confluence.jetbrains.com/display/IDEADEV/IntelliJ+IDEA+13.1+135.760+Release+Notes">こちら</a>からダウンロードできます。</p>
 
 <h3>まとめ</h3>
 
