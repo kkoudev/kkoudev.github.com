@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Gradle | 猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/blog/categories/gradle/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-04-28T11:04:20+09:00</updated>
+  <updated>2014-04-29T02:38:30+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -427,7 +427,7 @@ dependencies {
 このプラグインは自前で作成した provided の指定やWARプラグインを指定した場合のみ利用できる providedCompile の指定をしたとしても、
 WTPでAPサーバを起動したときに WEB-INF/lib のディレクトリへ強制的に全ての依存関係ライブラリがコピーされてしまいます。要は provided であることを考慮してくれません。
 この問題に対する公式な解決方法としては、Eclipseの設定から「Gradle」→「WTP」を選択し、そこに除去するプラグインを記述すれば WEB-INF/lib ディレクトリへコピーされなくなる、とのことです。
-せっかくGradleを利用しているのに手動で設定するという点からもなんとも落ちないですが…現状このプラグインを利用している以上はこうするしかないようです。</p>
+せっかくGradleを利用しているのに手動で設定するという点からもなんとも腑に落ちないですが…現状このプラグインを利用している以上はこうするしかないようです。</p>
 
 <p>もう１つの解決策としては、「Gradle Integration for Eclipse」プラグインでインポートせず、
 「gradle eclipse」コマンドを自前で実行してEclipseのプロジェクト設定ファイルを作成し、
