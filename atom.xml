@@ -4,7 +4,7 @@
   <title><![CDATA[猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-05-26T02:21:45+09:00</updated>
+  <updated>2014-05-26T02:25:10+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -14,7 +14,7 @@
 
   
   <entry>
-    <title type="html"><![CDATA[Graldeでリソースファイルをフィルタリングする場合の注意点]]></title>
+    <title type="html"><![CDATA[Gradleでリソースファイルをフィルタリングする場合の注意点]]></title>
     <link href="http://kkoudev.github.io/blog/2014/05/26/gradle-filtering-resources/"/>
     <updated>2014-05-26T01:39:26+09:00</updated>
     <id>http://kkoudev.github.io/blog/2014/05/26/gradle-filtering-resources</id>
