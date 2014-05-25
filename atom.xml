@@ -4,7 +4,7 @@
   <title><![CDATA[猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-05-26T02:30:01+09:00</updated>
+  <updated>2014-05-26T02:32:18+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -400,7 +400,7 @@ gradle.propertiesに拡張子を定義しておくと管理しやすいです。
 <h2>まとめ</h2>
 
 
-<p>Gradleは便利ですが、Mavenのときと同じ挙動を期待するとこのような思わぬ落とし穴があります。<br>
+<p>Gradleは便利ですが、Mavenのときと同じ挙動を期待するとこのような思わぬ落とし穴があります。
 processResourcesでフィルタリングを行う場合は filesMatching、またはfilesNotMatching を利用し、対象ファイルの拡張子を限定してからフィルタリングするようにしましょう。</p>
 ]]></content>
   </entry>
