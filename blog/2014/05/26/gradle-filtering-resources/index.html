@@ -105,7 +105,7 @@
 
 
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -134,35 +134,36 @@
 <span class='line-number'>27</span>
 <span class='line-number'>28</span>
 <span class='line-number'>29</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>/**
-</span><span class='line'> * ベースロジック
-</span><span class='line'> */
-</span><span class='line'>project(':base') {
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * ベースロジック</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">)</span> <span class="o">{</span>
 </span><span class='line'>
-</span><span class='line'>    apply plugin: 'java'
-</span><span class='line'>    apply plugin: 'eclipse'
-</span><span class='line'>    apply plugin: 'idea'
-</span><span class='line'>
-</span><span class='line'>
-</span><span class='line'>    processResources {
-</span><span class='line'>
-</span><span class='line'>        from(sourceSets.main.resources.srcDirs) {
-</span><span class='line'>
-</span><span class='line'>            // トークンを置換する
-</span><span class='line'>            filter(
-</span><span class='line'>                org.apache.tools.ant.filters.ReplaceTokens,
-</span><span class='line'>                tokens: [
-</span><span class='line'>                    'version': '1.0.0',
-</span><span class='line'>                    'db_ip': '127.0.0.1'
-</span><span class='line'>                ]
-</span><span class='line'>            )
-</span><span class='line'>
-</span><span class='line'>        }
-</span><span class='line'>
-</span><span class='line'>    }
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;java&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;eclipse&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;idea&#39;</span>
 </span><span class='line'>
 </span><span class='line'>
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+</span><span class='line'>    <span class="n">processResources</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="n">from</span><span class="o">(</span><span class="n">sourceSets</span><span class="o">.</span><span class="na">main</span><span class="o">.</span><span class="na">resources</span><span class="o">.</span><span class="na">srcDirs</span><span class="o">)</span> <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="c1">// トークンを置換する</span>
+</span><span class='line'>            <span class="n">filter</span><span class="o">(</span>
+</span><span class='line'>                <span class="n">org</span><span class="o">.</span><span class="na">apache</span><span class="o">.</span><span class="na">tools</span><span class="o">.</span><span class="na">ant</span><span class="o">.</span><span class="na">filters</span><span class="o">.</span><span class="na">ReplaceTokens</span><span class="o">,</span>
+</span><span class='line'>                <span class="nl">tokens:</span> <span class="o">[</span>
+</span><span class='line'>                    <span class="s1">&#39;version&#39;</span><span class="o">:</span> <span class="s1">&#39;1.0.0&#39;</span><span class="o">,</span>
+</span><span class='line'>                    <span class="s1">&#39;db_ip&#39;</span><span class="o">:</span> <span class="s1">&#39;127.0.0.1&#39;</span>
+</span><span class='line'>                <span class="o">]</span>
+</span><span class='line'>            <span class="o">)</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p>上記のスクリプトは、baseプロジェクトに含まれるリソースファイル(JARやWARに含まれるソースコード以外のファイル)に対して
@@ -186,15 +187,16 @@ gradle.propertiesに拡張子を定義しておくと管理しやすいです。
 
 <p>[gradle.properties]</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'># カンマ区切りで定義しておく
-</span><span class='line'>replace.extensions=xml,conf,dicon</span></code></pre></td></tr></table></div></figure>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="err">#</span> <span class="err">カンマ区切りで定義しておく</span>
+</span><span class='line'><span class="n">replace</span><span class="o">.</span><span class="na">extensions</span><span class="o">=</span><span class="n">xml</span><span class="o">,</span><span class="n">conf</span><span class="o">,</span><span class="n">dicon</span>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p>[build.gradle]</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -228,46 +230,47 @@ gradle.propertiesに拡張子を定義しておくと管理しやすいです。
 <span class='line-number'>32</span>
 <span class='line-number'>33</span>
 <span class='line-number'>34</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>/**
-</span><span class='line'> * ベースロジック
-</span><span class='line'> */
-</span><span class='line'>project(':base') {
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * ベースロジック</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">)</span> <span class="o">{</span>
 </span><span class='line'>
-</span><span class='line'>    apply plugin: 'java'
-</span><span class='line'>    apply plugin: 'eclipse'
-</span><span class='line'>    apply plugin: 'idea'
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;java&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;eclipse&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;idea&#39;</span>
 </span><span class='line'>
 </span><span class='line'>
-</span><span class='line'>    processResources {
+</span><span class='line'>    <span class="n">processResources</span> <span class="o">{</span>
 </span><span class='line'>
-</span><span class='line'>        // フィルタ対象リソース拡張子分繰り返す
-</span><span class='line'>        getProperty('replace.extensions').tokenize(',').each {
+</span><span class='line'>        <span class="c1">// フィルタ対象リソース拡張子分繰り返す</span>
+</span><span class='line'>        <span class="n">getProperty</span><span class="o">(</span><span class="s1">&#39;replace.extensions&#39;</span><span class="o">).</span><span class="na">tokenize</span><span class="o">(</span><span class="s1">&#39;,&#39;</span><span class="o">).</span><span class="na">each</span> <span class="o">{</span>
 </span><span class='line'>
-</span><span class='line'>            // 対象ファイルの場合
-</span><span class='line'>            filesMatching("**/*.$it") {
+</span><span class='line'>            <span class="c1">// 対象ファイルの場合</span>
+</span><span class='line'>            <span class="n">filesMatching</span><span class="o">(</span><span class="s2">&quot;**/*.$it&quot;</span><span class="o">)</span> <span class="o">{</span>
 </span><span class='line'>
-</span><span class='line'>                // トークンを置換する
-</span><span class='line'>                filter(
-</span><span class='line'>                    org.apache.tools.ant.filters.ReplaceTokens,
-</span><span class='line'>                    tokens: [
-</span><span class='line'>                        'version': '1.0.0',
-</span><span class='line'>                        'db_ip': '127.0.0.1'
-</span><span class='line'>                    ]
-</span><span class='line'>                )
+</span><span class='line'>                <span class="c1">// トークンを置換する</span>
+</span><span class='line'>                <span class="n">filter</span><span class="o">(</span>
+</span><span class='line'>                    <span class="n">org</span><span class="o">.</span><span class="na">apache</span><span class="o">.</span><span class="na">tools</span><span class="o">.</span><span class="na">ant</span><span class="o">.</span><span class="na">filters</span><span class="o">.</span><span class="na">ReplaceTokens</span><span class="o">,</span>
+</span><span class='line'>                    <span class="nl">tokens:</span> <span class="o">[</span>
+</span><span class='line'>                        <span class="s1">&#39;version&#39;</span><span class="o">:</span> <span class="s1">&#39;1.0.0&#39;</span><span class="o">,</span>
+</span><span class='line'>                        <span class="s1">&#39;db_ip&#39;</span><span class="o">:</span> <span class="s1">&#39;127.0.0.1&#39;</span>
+</span><span class='line'>                    <span class="o">]</span>
+</span><span class='line'>                <span class="o">)</span>
 </span><span class='line'>
-</span><span class='line'>            }
+</span><span class='line'>            <span class="o">}</span>
 </span><span class='line'>
-</span><span class='line'>        }
+</span><span class='line'>        <span class="o">}</span>
 </span><span class='line'>
-</span><span class='line'>    }
+</span><span class='line'>    <span class="o">}</span>
 </span><span class='line'>
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p>filesMatchingを利用するのがミソになります。
-拡張子を build.gradle へ直接記載する場合は以下のような書き方でもOKです。</p>
+拡張子を build.gradle へ直接記載する場合は以下のような書き方でも動作します。</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -309,48 +312,49 @@ gradle.propertiesに拡張子を定義しておくと管理しやすいです。
 <span class='line-number'>40</span>
 <span class='line-number'>41</span>
 <span class='line-number'>42</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>/**
-</span><span class='line'> * ベースロジック
-</span><span class='line'> */
-</span><span class='line'>project(':base') {
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * ベースロジック</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">)</span> <span class="o">{</span>
 </span><span class='line'>
-</span><span class='line'>    apply plugin: 'java'
-</span><span class='line'>    apply plugin: 'eclipse'
-</span><span class='line'>    apply plugin: 'idea'
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;java&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;eclipse&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;idea&#39;</span>
 </span><span class='line'>
 </span><span class='line'>
-</span><span class='line'>    processResources {
+</span><span class='line'>    <span class="n">processResources</span> <span class="o">{</span>
 </span><span class='line'>
-</span><span class='line'>        from(sourceSets.main.resources.srcDirs) {
+</span><span class='line'>        <span class="n">from</span><span class="o">(</span><span class="n">sourceSets</span><span class="o">.</span><span class="na">main</span><span class="o">.</span><span class="na">resources</span><span class="o">.</span><span class="na">srcDirs</span><span class="o">)</span> <span class="o">{</span>
 </span><span class='line'>
-</span><span class='line'>            // 対象拡張子のみコピー
-</span><span class='line'>            include 'xml'
-</span><span class='line'>            include 'conf'
-</span><span class='line'>            include 'dicon'
+</span><span class='line'>            <span class="c1">// 対象拡張子のみコピー</span>
+</span><span class='line'>            <span class="n">include</span> <span class="s1">&#39;xml&#39;</span>
+</span><span class='line'>            <span class="n">include</span> <span class="s1">&#39;conf&#39;</span>
+</span><span class='line'>            <span class="n">include</span> <span class="s1">&#39;dicon&#39;</span>
 </span><span class='line'>
-</span><span class='line'>            // トークンを置換する
-</span><span class='line'>            filter(
-</span><span class='line'>                org.apache.tools.ant.filters.ReplaceTokens,
-</span><span class='line'>                tokens: [
-</span><span class='line'>                    'version': '1.0.0',
-</span><span class='line'>                    'db_ip': '127.0.0.1'
-</span><span class='line'>                ]
-</span><span class='line'>            )
+</span><span class='line'>            <span class="c1">// トークンを置換する</span>
+</span><span class='line'>            <span class="n">filter</span><span class="o">(</span>
+</span><span class='line'>                <span class="n">org</span><span class="o">.</span><span class="na">apache</span><span class="o">.</span><span class="na">tools</span><span class="o">.</span><span class="na">ant</span><span class="o">.</span><span class="na">filters</span><span class="o">.</span><span class="na">ReplaceTokens</span><span class="o">,</span>
+</span><span class='line'>                <span class="nl">tokens:</span> <span class="o">[</span>
+</span><span class='line'>                    <span class="s1">&#39;version&#39;</span><span class="o">:</span> <span class="s1">&#39;1.0.0&#39;</span><span class="o">,</span>
+</span><span class='line'>                    <span class="s1">&#39;db_ip&#39;</span><span class="o">:</span> <span class="s1">&#39;127.0.0.1&#39;</span>
+</span><span class='line'>                <span class="o">]</span>
+</span><span class='line'>            <span class="o">)</span>
 </span><span class='line'>
-</span><span class='line'>        }
+</span><span class='line'>        <span class="o">}</span>
 </span><span class='line'>
-</span><span class='line'>        // 残りのファイルをコピー
-</span><span class='line'>        from(sourceSets.main.resources.srcDirs) {
+</span><span class='line'>        <span class="c1">// 残りのファイルをコピー</span>
+</span><span class='line'>        <span class="n">from</span><span class="o">(</span><span class="n">sourceSets</span><span class="o">.</span><span class="na">main</span><span class="o">.</span><span class="na">resources</span><span class="o">.</span><span class="na">srcDirs</span><span class="o">)</span> <span class="o">{</span>
 </span><span class='line'>
-</span><span class='line'>            exclude 'xml'
-</span><span class='line'>            exclude 'conf'
-</span><span class='line'>            exclude 'dicon'
+</span><span class='line'>            <span class="n">exclude</span> <span class="s1">&#39;xml&#39;</span>
+</span><span class='line'>            <span class="n">exclude</span> <span class="s1">&#39;conf&#39;</span>
+</span><span class='line'>            <span class="n">exclude</span> <span class="s1">&#39;dicon&#39;</span>
 </span><span class='line'>
-</span><span class='line'>        }
+</span><span class='line'>        <span class="o">}</span>
 </span><span class='line'>
-</span><span class='line'>    }
+</span><span class='line'>    <span class="o">}</span>
 </span><span class='line'>
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p>ただ、この書き方は推奨いたしません。
@@ -362,7 +366,7 @@ gradle.propertiesに拡張子を定義しておくと管理しやすいです。
 
 <p>※ replace.extensions が gradle.properties に定義されていることとする</p>
 
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>
 <span class='line-number'>3</span>
 <span class='line-number'>4</span>
@@ -411,55 +415,56 @@ gradle.propertiesに拡張子を定義しておくと管理しやすいです。
 <span class='line-number'>47</span>
 <span class='line-number'>48</span>
 <span class='line-number'>49</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>/**
-</span><span class='line'> * ベースロジック
-</span><span class='line'> */
-</span><span class='line'>project(':base') {
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="cm">/**</span>
+</span><span class='line'><span class="cm"> * ベースロジック</span>
+</span><span class='line'><span class="cm"> */</span>
+</span><span class='line'><span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">)</span> <span class="o">{</span>
 </span><span class='line'>
-</span><span class='line'>    apply plugin: 'java'
-</span><span class='line'>    apply plugin: 'eclipse'
-</span><span class='line'>    apply plugin: 'idea'
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;java&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;eclipse&#39;</span>
+</span><span class='line'>    <span class="n">apply</span> <span class="nl">plugin:</span> <span class="s1">&#39;idea&#39;</span>
 </span><span class='line'>
 </span><span class='line'>
-</span><span class='line'>    processResources {
+</span><span class='line'>    <span class="n">processResources</span> <span class="o">{</span>
 </span><span class='line'>
-</span><span class='line'>        from(sourceSets.main.resources.srcDirs) {
+</span><span class='line'>        <span class="n">from</span><span class="o">(</span><span class="n">sourceSets</span><span class="o">.</span><span class="na">main</span><span class="o">.</span><span class="na">resources</span><span class="o">.</span><span class="na">srcDirs</span><span class="o">)</span> <span class="o">{</span>
 </span><span class='line'>
-</span><span class='line'>            // フィルタ対象リソース拡張子分繰り返す
-</span><span class='line'>            getProperty('replace.extensions').tokenize(',').each {
+</span><span class='line'>            <span class="c1">// フィルタ対象リソース拡張子分繰り返す</span>
+</span><span class='line'>            <span class="n">getProperty</span><span class="o">(</span><span class="s1">&#39;replace.extensions&#39;</span><span class="o">).</span><span class="na">tokenize</span><span class="o">(</span><span class="s1">&#39;,&#39;</span><span class="o">).</span><span class="na">each</span> <span class="o">{</span>
 </span><span class='line'>
-</span><span class='line'>                // 対象拡張子のみコピー
-</span><span class='line'>                include it
+</span><span class='line'>                <span class="c1">// 対象拡張子のみコピー</span>
+</span><span class='line'>                <span class="n">include</span> <span class="n">it</span>
 </span><span class='line'>
-</span><span class='line'>            }
+</span><span class='line'>            <span class="o">}</span>
 </span><span class='line'>
-</span><span class='line'>            // トークンを置換する
-</span><span class='line'>            filter(
-</span><span class='line'>                org.apache.tools.ant.filters.ReplaceTokens,
-</span><span class='line'>                tokens: [
-</span><span class='line'>                    'version': '1.0.0',
-</span><span class='line'>                    'db_ip': '127.0.0.1'
-</span><span class='line'>                ]
-</span><span class='line'>            )
+</span><span class='line'>            <span class="c1">// トークンを置換する</span>
+</span><span class='line'>            <span class="n">filter</span><span class="o">(</span>
+</span><span class='line'>                <span class="n">org</span><span class="o">.</span><span class="na">apache</span><span class="o">.</span><span class="na">tools</span><span class="o">.</span><span class="na">ant</span><span class="o">.</span><span class="na">filters</span><span class="o">.</span><span class="na">ReplaceTokens</span><span class="o">,</span>
+</span><span class='line'>                <span class="nl">tokens:</span> <span class="o">[</span>
+</span><span class='line'>                    <span class="s1">&#39;version&#39;</span><span class="o">:</span> <span class="s1">&#39;1.0.0&#39;</span><span class="o">,</span>
+</span><span class='line'>                    <span class="s1">&#39;db_ip&#39;</span><span class="o">:</span> <span class="s1">&#39;127.0.0.1&#39;</span>
+</span><span class='line'>                <span class="o">]</span>
+</span><span class='line'>            <span class="o">)</span>
 </span><span class='line'>
-</span><span class='line'>        }
+</span><span class='line'>        <span class="o">}</span>
 </span><span class='line'>
-</span><span class='line'>        // 残りのファイルをコピー
-</span><span class='line'>        from(sourceSets.main.resources.srcDirs) {
+</span><span class='line'>        <span class="c1">// 残りのファイルをコピー</span>
+</span><span class='line'>        <span class="n">from</span><span class="o">(</span><span class="n">sourceSets</span><span class="o">.</span><span class="na">main</span><span class="o">.</span><span class="na">resources</span><span class="o">.</span><span class="na">srcDirs</span><span class="o">)</span> <span class="o">{</span>
 </span><span class='line'>
-</span><span class='line'>            // フィルタ対象リソース拡張子分繰り返す
-</span><span class='line'>            getProperty('replace.extensions').tokenize(',').each {
+</span><span class='line'>            <span class="c1">// フィルタ対象リソース拡張子分繰り返す</span>
+</span><span class='line'>            <span class="n">getProperty</span><span class="o">(</span><span class="s1">&#39;replace.extensions&#39;</span><span class="o">).</span><span class="na">tokenize</span><span class="o">(</span><span class="s1">&#39;,&#39;</span><span class="o">).</span><span class="na">each</span> <span class="o">{</span>
 </span><span class='line'>
-</span><span class='line'>                // 対象拡張子のみ除外
-</span><span class='line'>                exclude it
+</span><span class='line'>                <span class="c1">// 対象拡張子のみ除外</span>
+</span><span class='line'>                <span class="n">exclude</span> <span class="n">it</span>
 </span><span class='line'>
-</span><span class='line'>            }
+</span><span class='line'>            <span class="o">}</span>
 </span><span class='line'>
-</span><span class='line'>        }
+</span><span class='line'>        <span class="o">}</span>
 </span><span class='line'>
-</span><span class='line'>    }
+</span><span class='line'>    <span class="o">}</span>
 </span><span class='line'>
-</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
 
 
 <p>これだと同じ拡張子を指定しているにも関わらず、上手く動作しません。<br>

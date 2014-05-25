@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Gradle | 猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/blog/categories/gradle/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-05-26T02:28:42+09:00</updated>
+  <updated>2014-05-26T02:30:01+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -26,7 +26,7 @@
 <h3>問題となるスクリプト</h3>
 
 
-<p>```
+<p>``` groovy
 /<em>*
  * ベースロジック
  </em>/
@@ -86,7 +86,7 @@ gradle.propertiesに拡張子を定義しておくと管理しやすいです。
 ```</p>
 
 <p>[build.gradle]
-```
+``` groovy
 /<em>*
  * ベースロジック
  </em>/
@@ -125,9 +125,9 @@ processResources {
 ```</p>
 
 <p>filesMatchingを利用するのがミソになります。
-拡張子を build.gradle へ直接記載する場合は以下のような書き方でもOKです。</p>
+拡張子を build.gradle へ直接記載する場合は以下のような書き方でも動作します。</p>
 
-<p>```
+<p>``` groovy
 /<em>*
  * ベースロジック
  </em>/
@@ -181,7 +181,7 @@ processResources {
 
 
 <p>※ replace.extensions が gradle.properties に定義されていることとする
-```
+``` groovy
 /<em>*
  * ベースロジック
  </em>/
