@@ -1,0 +1,676 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Graldeでリソースファイルをフィルタリングする場合の注意点 - 猫好きモバイルアプリケーション開発者記録</title>
+  <meta name="author" content="kkoudev">
+
+  
+  <meta name="description" content="Gradleでリソースファイルのフィルタリングを行う例は検索サイトで調べると結構多くヒットするかと思います。
+ですが、その殆どが今回紹介する注意点について考慮されていないスクリプト記述をしています。
+具体的に何を注意しなければならないのでしょうか。
+以下にリソースフィルタリングの例を紹介します。 &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://kkoudev.github.io/blog/2014/05/26/gradle-filtering-resources/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/data-table.css" rel="stylesheet" type="text/css" />
+  <link href="/stylesheets/facebook.css" rel="stylesheet" type="text/css" />
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="猫好きモバイルアプリケーション開発者記録" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">猫好きモバイルアプリケーション開発者記録</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:kkoudev.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Graldeでリソースファイルをフィルタリングする場合の注意点</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-05-26T01:39:26+09:00" pubdate data-updated="true">May 26<span>th</span>, 2014</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Gradleでリソースファイルのフィルタリングを行う例は検索サイトで調べると結構多くヒットするかと思います。
+ですが、その殆どが今回紹介する注意点について考慮されていないスクリプト記述をしています。
+具体的に何を注意しなければならないのでしょうか。
+以下にリソースフィルタリングの例を紹介します。</p>
+
+<h3>問題となるスクリプト</h3>
+
+
+
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>/**
+</span><span class='line'> * ベースロジック
+</span><span class='line'> */
+</span><span class='line'>project(':base') {
+</span><span class='line'>
+</span><span class='line'>    apply plugin: 'java'
+</span><span class='line'>    apply plugin: 'eclipse'
+</span><span class='line'>    apply plugin: 'idea'
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>    processResources {
+</span><span class='line'>
+</span><span class='line'>        from(sourceSets.main.resources.srcDirs) {
+</span><span class='line'>
+</span><span class='line'>            // トークンを置換する
+</span><span class='line'>            filter(
+</span><span class='line'>                org.apache.tools.ant.filters.ReplaceTokens,
+</span><span class='line'>                tokens: [
+</span><span class='line'>                    'version': '1.0.0',
+</span><span class='line'>                    'db_ip': '127.0.0.1'
+</span><span class='line'>                ]
+</span><span class='line'>            )
+</span><span class='line'>
+</span><span class='line'>        }
+</span><span class='line'>
+</span><span class='line'>    }
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>上記のスクリプトは、baseプロジェクトに含まれるリソースファイル(JARやWARに含まれるソースコード以外のファイル)に対して
+「@version@」と「@db_ip@」の指定が含まれていた場合にそれぞれを指定の値に置換するという指定です。<br>
+一見これは上手く動作しますし、問題ないケースもあります。</p>
+
+<p>しかし、この指定は見ての通り<strong><font color="red">リソースファイル全てに対して行われれます</font></strong>。<br>
+これはどういうことなのかというと、リソースファイルがテキストファイルであれば何ら問題はないのですが、
+バイナリファイルが含まれているとそれすらも置換対象となってしまうのです！</p>
+
+<p>例えばWebサイトシステムでは、ExcelファイルのテンプレートとなるExcelを予めJARやWARに含めて、
+それをプログラム内で利用するケースがよくあるかと思います。
+その場合、リソースファイルであるExcelファイルすらも置換対象となり、<strong><font color="red">ファイルが盛大に壊れます</font></strong>。
+Mavenでフィルタリングを行うときはバイナリファイルは対象外となるため、それを期待して利用するととんでもない目に遭うわけです。</p>
+
+<h2>解決方法</h2>
+
+
+<p>解決策としては、以下のように対象となる拡張子を指定することで回避します。
+gradle.propertiesに拡張子を定義しておくと管理しやすいです。</p>
+
+<p>[gradle.properties]</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'># カンマ区切りで定義しておく
+</span><span class='line'>replace.extensions=xml,conf,dicon</span></code></pre></td></tr></table></div></figure>
+
+
+<p>[build.gradle]</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>/**
+</span><span class='line'> * ベースロジック
+</span><span class='line'> */
+</span><span class='line'>project(':base') {
+</span><span class='line'>
+</span><span class='line'>    apply plugin: 'java'
+</span><span class='line'>    apply plugin: 'eclipse'
+</span><span class='line'>    apply plugin: 'idea'
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>    processResources {
+</span><span class='line'>
+</span><span class='line'>        // フィルタ対象リソース拡張子分繰り返す
+</span><span class='line'>        getProperty('replace.extensions').tokenize(',').each {
+</span><span class='line'>
+</span><span class='line'>            // 対象ファイルの場合
+</span><span class='line'>            filesMatching("**/*.$it") {
+</span><span class='line'>
+</span><span class='line'>                // トークンを置換する
+</span><span class='line'>                filter(
+</span><span class='line'>                    org.apache.tools.ant.filters.ReplaceTokens,
+</span><span class='line'>                    tokens: [
+</span><span class='line'>                        'version': '1.0.0',
+</span><span class='line'>                        'db_ip': '127.0.0.1'
+</span><span class='line'>                    ]
+</span><span class='line'>                )
+</span><span class='line'>
+</span><span class='line'>            }
+</span><span class='line'>
+</span><span class='line'>        }
+</span><span class='line'>
+</span><span class='line'>    }
+</span><span class='line'>
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>filesMatchingを利用するのがミソになります。
+拡張子を build.gradle へ直接記載する場合は以下のような書き方でもOKです。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>/**
+</span><span class='line'> * ベースロジック
+</span><span class='line'> */
+</span><span class='line'>project(':base') {
+</span><span class='line'>
+</span><span class='line'>    apply plugin: 'java'
+</span><span class='line'>    apply plugin: 'eclipse'
+</span><span class='line'>    apply plugin: 'idea'
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>    processResources {
+</span><span class='line'>
+</span><span class='line'>        from(sourceSets.main.resources.srcDirs) {
+</span><span class='line'>
+</span><span class='line'>            // 対象拡張子のみコピー
+</span><span class='line'>            include 'xml'
+</span><span class='line'>            include 'conf'
+</span><span class='line'>            include 'dicon'
+</span><span class='line'>
+</span><span class='line'>            // トークンを置換する
+</span><span class='line'>            filter(
+</span><span class='line'>                org.apache.tools.ant.filters.ReplaceTokens,
+</span><span class='line'>                tokens: [
+</span><span class='line'>                    'version': '1.0.0',
+</span><span class='line'>                    'db_ip': '127.0.0.1'
+</span><span class='line'>                ]
+</span><span class='line'>            )
+</span><span class='line'>
+</span><span class='line'>        }
+</span><span class='line'>
+</span><span class='line'>        // 残りのファイルをコピー
+</span><span class='line'>        from(sourceSets.main.resources.srcDirs) {
+</span><span class='line'>
+</span><span class='line'>            exclude 'xml'
+</span><span class='line'>            exclude 'conf'
+</span><span class='line'>            exclude 'dicon'
+</span><span class='line'>
+</span><span class='line'>        }
+</span><span class='line'>
+</span><span class='line'>    }
+</span><span class='line'>
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ただ、この書き方は推奨いたしません。
+なぜなら、上記の拡張子指定をスクリプトで記述すると上手く動作しないためです。
+せっかくなので紹介しておきます。</p>
+
+<h3>悪い例</h3>
+
+
+<p>※ replace.extensions が gradle.properties に定義されていることとする</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>/**
+</span><span class='line'> * ベースロジック
+</span><span class='line'> */
+</span><span class='line'>project(':base') {
+</span><span class='line'>
+</span><span class='line'>    apply plugin: 'java'
+</span><span class='line'>    apply plugin: 'eclipse'
+</span><span class='line'>    apply plugin: 'idea'
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'>    processResources {
+</span><span class='line'>
+</span><span class='line'>        from(sourceSets.main.resources.srcDirs) {
+</span><span class='line'>
+</span><span class='line'>            // フィルタ対象リソース拡張子分繰り返す
+</span><span class='line'>            getProperty('replace.extensions').tokenize(',').each {
+</span><span class='line'>
+</span><span class='line'>                // 対象拡張子のみコピー
+</span><span class='line'>                include it
+</span><span class='line'>
+</span><span class='line'>            }
+</span><span class='line'>
+</span><span class='line'>            // トークンを置換する
+</span><span class='line'>            filter(
+</span><span class='line'>                org.apache.tools.ant.filters.ReplaceTokens,
+</span><span class='line'>                tokens: [
+</span><span class='line'>                    'version': '1.0.0',
+</span><span class='line'>                    'db_ip': '127.0.0.1'
+</span><span class='line'>                ]
+</span><span class='line'>            )
+</span><span class='line'>
+</span><span class='line'>        }
+</span><span class='line'>
+</span><span class='line'>        // 残りのファイルをコピー
+</span><span class='line'>        from(sourceSets.main.resources.srcDirs) {
+</span><span class='line'>
+</span><span class='line'>            // フィルタ対象リソース拡張子分繰り返す
+</span><span class='line'>            getProperty('replace.extensions').tokenize(',').each {
+</span><span class='line'>
+</span><span class='line'>                // 対象拡張子のみ除外
+</span><span class='line'>                exclude it
+</span><span class='line'>
+</span><span class='line'>            }
+</span><span class='line'>
+</span><span class='line'>        }
+</span><span class='line'>
+</span><span class='line'>    }
+</span><span class='line'>
+</span><span class='line'>}</span></code></pre></td></tr></table></div></figure>
+
+
+<p>これだと同じ拡張子を指定しているにも関わらず、上手く動作しません。<br>
+どうやら processResources において from 指定を行う場合、
+同じパスに対して include と exclude の指定が被ると上手く動作せず、リソースファイルが全てJARやWARから消失します。
+(ただし、直接記述すると何故か期待通りに動作する)
+おそらく動的記述した場合と静的記述した場合でスクリプトの解釈順に違いが出るのだと思いますが、
+無理に考えても仕方ないのでこの書き方はやめましょう。</p>
+
+<h2>まとめ</h2>
+
+
+<p>Gradleは便利ですが、Mavenのときと同じ挙動を期待するとこのような思わぬ落とし穴があります。<br>
+processResourcesでフィルタリングを行う場合は filesMatching、またはfilesNotMatching を利用し、対象ファイルの拡張子を限定してからフィルタリングするようにしましょう。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">kkoudev</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-05-26T01:39:26+09:00" pubdate data-updated="true">May 26<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/gradle/'>Gradle</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://kkoudev.github.io/blog/2014/05/26/gradle-filtering-resources/" data-via="kkoudev" data-counturl="http://kkoudev.github.io/blog/2014/05/26/gradle-filtering-resources/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/03/30/gradle-tips/" title="Previous Post: Gradleで陥りやすい問題点の解決策TIPS集">&laquo; Gradleで陥りやすい問題点の解決策TIPS集</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/05/26/gradle-filtering-resources/">Graldeでリソースファイルをフィルタリングする場合の注意点</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/03/30/gradle-tips/">Gradleで陥りやすい問題点の解決策TIPS集</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/03/24/gradle_build/">Gradleによるビルドとパッケージ作成</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/03/22/gradle_ide/">GradleでEclipseとIntellij IDEAの開発環境を作る</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2013/09/14/sql/">EXISTSとSQLの高速化について</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/kkoudev">@kkoudev</a> on GitHub
+  
+  <script type="text/javascript">
+    $.domReady(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'kkoudev',
+            count: 0,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - kkoudev -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+  - <span class="credit">Theme by <a href="http://www.gehaxelt.in">Gehaxelt</a></span>
+  <span class="credit">and <a href="http://www.it-solutions-neef.de">IT Solutions Neef</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'catmobileapp';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://kkoudev.github.io/blog/2014/05/26/gradle-filtering-resources/';
+        var disqus_url = 'http://kkoudev.github.io/blog/2014/05/26/gradle-filtering-resources/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+
+
+</body>
+</html>

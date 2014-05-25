@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Gradle | 猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/blog/categories/gradle/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-04-29T02:41:30+09:00</updated>
+  <updated>2014-05-26T02:21:45+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -12,6 +12,242 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Graldeでリソースファイルをフィルタリングする場合の注意点]]></title>
+    <link href="http://kkoudev.github.io/blog/2014/05/26/gradle-filtering-resources/"/>
+    <updated>2014-05-26T01:39:26+09:00</updated>
+    <id>http://kkoudev.github.io/blog/2014/05/26/gradle-filtering-resources</id>
+    <content type="html"><![CDATA[<p>Gradleでリソースファイルのフィルタリングを行う例は検索サイトで調べると結構多くヒットするかと思います。
+ですが、その殆どが今回紹介する注意点について考慮されていないスクリプト記述をしています。
+具体的に何を注意しなければならないのでしょうか。
+以下にリソースフィルタリングの例を紹介します。</p>
+
+<h3>問題となるスクリプト</h3>
+
+
+<p>```
+/<em>*
+ * ベースロジック
+ </em>/
+project(&lsquo;:base&rsquo;) {</p>
+
+<pre><code>apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+
+
+processResources {
+
+    from(sourceSets.main.resources.srcDirs) {
+
+        // トークンを置換する
+        filter(
+            org.apache.tools.ant.filters.ReplaceTokens,
+            tokens: [
+                'version': '1.0.0',
+                'db_ip': '127.0.0.1'
+            ]
+        )
+
+    }
+
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>上記のスクリプトは、baseプロジェクトに含まれるリソースファイル(JARやWARに含まれるソースコード以外のファイル)に対して
+「@version@」と「@db_ip@」の指定が含まれていた場合にそれぞれを指定の値に置換するという指定です。<br>
+一見これは上手く動作しますし、問題ないケースもあります。</p>
+
+<p>しかし、この指定は見ての通り<strong><font color="red">リソースファイル全てに対して行われれます</font></strong>。<br>
+これはどういうことなのかというと、リソースファイルがテキストファイルであれば何ら問題はないのですが、
+バイナリファイルが含まれているとそれすらも置換対象となってしまうのです！</p>
+
+<p>例えばWebサイトシステムでは、ExcelファイルのテンプレートとなるExcelを予めJARやWARに含めて、
+それをプログラム内で利用するケースがよくあるかと思います。
+その場合、リソースファイルであるExcelファイルすらも置換対象となり、<strong><font color="red">ファイルが盛大に壊れます</font></strong>。
+Mavenでフィルタリングを行うときはバイナリファイルは対象外となるため、それを期待して利用するととんでもない目に遭うわけです。</p>
+
+<h2>解決方法</h2>
+
+
+<p>解決策としては、以下のように対象となる拡張子を指定することで回避します。
+gradle.propertiesに拡張子を定義しておくと管理しやすいです。</p>
+
+<p>[gradle.properties]
+```</p>
+
+<h1>カンマ区切りで定義しておく</h1>
+
+<p>replace.extensions=xml,conf,dicon
+```</p>
+
+<p>[build.gradle]
+```
+/<em>*
+ * ベースロジック
+ </em>/
+project(&lsquo;:base&rsquo;) {</p>
+
+<pre><code>apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+
+
+processResources {
+
+    // フィルタ対象リソース拡張子分繰り返す
+    getProperty('replace.extensions').tokenize(',').each {
+
+        // 対象ファイルの場合
+        filesMatching("**/*.$it") {
+
+            // トークンを置換する
+            filter(
+                org.apache.tools.ant.filters.ReplaceTokens,
+                tokens: [
+                    'version': '1.0.0',
+                    'db_ip': '127.0.0.1'
+                ]
+            )
+
+        }
+
+    }
+
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>filesMatchingを利用するのがミソになります。
+拡張子を build.gradle へ直接記載する場合は以下のような書き方でもOKです。</p>
+
+<p>```
+/<em>*
+ * ベースロジック
+ </em>/
+project(&lsquo;:base&rsquo;) {</p>
+
+<pre><code>apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+
+
+processResources {
+
+    from(sourceSets.main.resources.srcDirs) {
+
+        // 対象拡張子のみコピー
+        include 'xml'
+        include 'conf'
+        include 'dicon'
+
+        // トークンを置換する
+        filter(
+            org.apache.tools.ant.filters.ReplaceTokens,
+            tokens: [
+                'version': '1.0.0',
+                'db_ip': '127.0.0.1'
+            ]
+        )
+
+    }
+
+    // 残りのファイルをコピー
+    from(sourceSets.main.resources.srcDirs) {
+
+        exclude 'xml'
+        exclude 'conf'
+        exclude 'dicon'
+
+    }
+
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>ただ、この書き方は推奨いたしません。
+なぜなら、上記の拡張子指定をスクリプトで記述すると上手く動作しないためです。
+せっかくなので紹介しておきます。</p>
+
+<h3>悪い例</h3>
+
+
+<p>※ replace.extensions が gradle.properties に定義されていることとする
+```
+/<em>*
+ * ベースロジック
+ </em>/
+project(&lsquo;:base&rsquo;) {</p>
+
+<pre><code>apply plugin: 'java'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+
+
+processResources {
+
+    from(sourceSets.main.resources.srcDirs) {
+
+        // フィルタ対象リソース拡張子分繰り返す
+        getProperty('replace.extensions').tokenize(',').each {
+
+            // 対象拡張子のみコピー
+            include it
+
+        }
+
+        // トークンを置換する
+        filter(
+            org.apache.tools.ant.filters.ReplaceTokens,
+            tokens: [
+                'version': '1.0.0',
+                'db_ip': '127.0.0.1'
+            ]
+        )
+
+    }
+
+    // 残りのファイルをコピー
+    from(sourceSets.main.resources.srcDirs) {
+
+        // フィルタ対象リソース拡張子分繰り返す
+        getProperty('replace.extensions').tokenize(',').each {
+
+            // 対象拡張子のみ除外
+            exclude it
+
+        }
+
+    }
+
+}
+</code></pre>
+
+<p>}
+```</p>
+
+<p>これだと同じ拡張子を指定しているにも関わらず、上手く動作しません。<br>
+どうやら processResources において from 指定を行う場合、
+同じパスに対して include と exclude の指定が被ると上手く動作せず、リソースファイルが全てJARやWARから消失します。
+(ただし、直接記述すると何故か期待通りに動作する)
+おそらく動的記述した場合と静的記述した場合でスクリプトの解釈順に違いが出るのだと思いますが、
+無理に考えても仕方ないのでこの書き方はやめましょう。</p>
+
+<h2>まとめ</h2>
+
+
+<p>Gradleは便利ですが、Mavenのときと同じ挙動を期待するとこのような思わぬ落とし穴があります。<br>
+processResourcesでフィルタリングを行う場合は filesMatching、またはfilesNotMatching を利用し、対象ファイルの拡張子を限定してからフィルタリングするようにしましょう。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Gradleで陥りやすい問題点の解決策TIPS集]]></title>
