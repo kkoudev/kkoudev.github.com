@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Perl | 猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/blog/categories/perl/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-06-16T01:47:48+09:00</updated>
+  <updated>2014-06-16T01:49:09+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -62,8 +62,8 @@ $scaledImage->save(&lsquo;sample_resized.jpg&rsquo;);
 
 
 <p>それでは、ImageMagickと速度比較してみます。<br>
-対等に比較を行うために、まずImageMagickの高速化を測ります。
-具体的には、以下の設定を予め行ってコンパイルをしておきます。<br></p>
+対等に比較を行うために、まずImageMagickの高速化を測ります。<br>
+具体的には、以下のオプションを指定して予めコンパイルしておきます。<br></p>
 
 <h3>01. 高速化のためのImageMagickのコンパイルオプション</h3>
 
