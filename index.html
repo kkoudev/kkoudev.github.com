@@ -9,10 +9,10 @@
   <meta name="author" content="kkoudev">
 
   
-  <meta name="description" content="Gradleでリソースファイルのフィルタリングを行う例は検索サイトで調べると結構多くヒットするかと思います。
-ですが、その殆どが今回紹介する注意点について考慮されていないスクリプト記述をしています。
-具体的に何を注意しなければならないのでしょうか。
-以下にリソースフィルタリングの例を紹介します。 &hellip;">
+  <meta name="description" content="久々に作ったものをGithubへ公開しました。
+元ネタは、よくImageMagickと比較される Imlib2 です。
+これのJPEGヒント対応版が欲しくなったので探したのですが、どこにも見当たらなかったのでいっそのこと自分で作りました。
+( &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -67,6 +67,237 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/06/15/imlib2/">Imlib2とImage::Imlib2のJPEGヒント対応版を作成しました</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-06-15T21:47:17+09:00" pubdate data-updated="true">Jun 15<span>th</span>, 2014</time>
+        
+         | <a href="/blog/2014/06/15/imlib2/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>久々に作ったものをGithubへ公開しました。<br>
+元ネタは、よくImageMagickと比較される Imlib2 です。<br>
+これのJPEGヒント対応版が欲しくなったので探したのですが、どこにも見当たらなかったのでいっそのこと自分で作りました。<br>
+(対応については<a href="http://labs.edge.jp/smalllight/">SmallLight</a>のソースを参考にさせて頂きました)<br></p>
+
+<h2>JPEGヒント(scale denom)とは</h2>
+
+
+<p>まずJPEGヒントとは何かというと、ImageMagickやImlib2で利用しているlibjpeg ver.7以降で利用することの出来る scale_denom というスケーリング手法の俗称です。<br>
+これは簡単に言うと予めリサイズ後のサイズがわかっている場合に、元画像ロード時にメモリを効率よく確保しつつリサイズを高速化する手法です。<br>
+ImageMagickではこの機能をサポートしており、「-define jpeg:size=640x480」といったオプションをつけることで利用することができます。<br>
+よく「ImageMagickは遅い」と言われるのですが、このJPEGヒントを利用することで10倍近くの高速化が測れます。<br></p>
+
+<p>ところが、Imlib2にはこのオプションが存在せず、APIにもそれをサポートしたものがありません。
+APIの設計上、JPEGのみに特化した設計にはなっていないというのも理由の１つかも知れませんが、
+JPEGヒントがないImlib2は単純なリサイズですとImageMagickと同等か少し遅くなってしまうため、ベースの速度が速いのにこのままでは非常に勿体ないわけです。<br></p>
+
+<h2>JPEGヒントをサポートしたImlib2の利用</h2>
+
+
+<p>そこで今回、Imlib2を拡張してJPEGヒントが利用できるように実装しました。<br>
+実際に利用する場合はPerlのライブラリであるImage::Imlib2を経由して利用します。<br>
+このImage::Imlib2もJPEGヒントに対応させるために少し拡張しております。<br>
+実際の利用イメージとしては以下のような感じです。<br></p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='perl'><span class='line'><span class="k">use</span> <span class="nn">Image::</span><span class="n">Imlib2</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1"># 元サイズ1920x1200の画像を使用</span>
+</span><span class='line'><span class="k">my</span> <span class="nv">$scaledImage</span> <span class="o">=</span> <span class="nn">Image::</span><span class="n">Imlib2</span><span class="o">-&gt;</span><span class="n">load_scale</span><span class="p">(</span><span class="s">&#39;sample.jpg&#39;</span><span class="p">,</span> <span class="mi">640</span><span class="p">,</span> <span class="mi">480</span><span class="p">);</span>
+</span><span class='line'><span class="nv">$scaledImage</span> <span class="o">=</span> <span class="nv">$scaledImage</span><span class="o">-&gt;</span><span class="n">create_scaled_image</span><span class="p">(</span><span class="mi">640</span><span class="p">,</span> <span class="mi">480</span><span class="p">);</span>
+</span><span class='line'><span class="nv">$scaledImage</span><span class="o">-&gt;</span><span class="n">set_quality</span><span class="p">(</span><span class="mi">100</span><span class="p">);</span>
+</span><span class='line'><span class="nv">$scaledImage</span><span class="o">-&gt;</span><span class="n">save</span><span class="p">(</span><span class="s">&#39;sample_resized.jpg&#39;</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>「load_scale」というメソッドを追加しており、これを利用することでロード時にリサイズ後のサイズを指定します。
+あとは普通にリサイズして書き出してみます。
+これだけで、このサイズの場合は元のJPEGヒントを利用しない場合に比べて 1.5 倍ほど高速化しております。</p>
+
+<h2>チューニング対応したImageMagickとの比較</h2>
+
+
+<p>では、ImageMagickと速度比較してみます。<br>
+ImageMagickで高速化をするためには、以下の設定を予め行ってコンパイルをしておきます。<br></p>
+
+<h3>01. 高速化のためのImageMagickのコンパイルオプション</h3>
+
+
+<p>01. &mdash;disable-openmp を指定してOpenMPを無効にする<br>
+→これが有効になっていると、マルチスレッド実行時に異常にメモリを消費して重くなる<br></p>
+
+<p>02. &mdash;with-quantum-depth=8 を指定してRPG分解能を 8 bitにする。<br>
+→通常はこれで十分に24/32 bitの画像を処理できます。この指定をしなくても、convert 実行時に -depth 8 をオプションとして渡してもOK<br></p>
+
+<p>特に 01 が重要になります。<br>
+画像のサムネイル作成を高速化する場合、最初に出てくる発想としてはマルチスレッドで実行することがあげられますが、
+OpenMPはそのマルチスレッドによる実行時に異常な負荷をあげる原因となっているからです。
+02は -depth 8 を convert 実行時に指定しても良いと思いますが、コマンド実行時に特に意識させずに高速化したいのであればコンパイル時に指定してしまいましょう。</p>
+
+<h3>02. libjpeg-turboの導入</h3>
+
+
+<p>ImageMagickもImlib2も通常はlibjpegを利用しますが、このlibjpegよりも更に高速に処理ができる libjpeg-turbo というライブラリがあります。
+これを利用することで更に 1.3 倍ほど高速になります。
+導入方法は簡単で、<a target="_blank" href="http://sourceforge.net/projects/libjpeg-turbo/files/">こちら</a>より最新版のRPMをダウンロードしてインストールします。
+すると、/opt 配下へインストールされますので、以下のようにして共有ライブラリファイルとして認識させます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nb">echo</span> /opt/libjpeg-turbo/lib64 &gt; /etc/ld.so.conf.d/libjpeg-turbo.conf
+</span><span class='line'>ldconfig
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>これでインストール済みのImageMagickとImlib2が libjpeg-turbo の方を利用するようになります。</p>
+
+<h3>03. 実効速度の比較</h3>
+
+
+<p>準備が完了したところで、実効速度を比較してみます。<br>
+今回の検証では 1920x1200 のJPEG画像を 640x480 へ 1000 回リサイズした場合の速度差を比較しています。<br>
+具体的には以下の内容のシェルスクリプトを作成して速度比較してみました。<br></p>
+
+<p>＜ImageMagick＞</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nb">time</span> /bin/bash <span class="s">&lt;&lt; TIMEEND</span>
+</span><span class='line'><span class="s">for (( i = 0; i &lt; 1000; i++ ))</span>
+</span><span class='line'><span class="s">do</span>
+</span><span class='line'><span class="s">    convert -define jpeg:size=640x480 -quality 100 -scale 640x480 sample.jpg sample_resized.jpg</span>
+</span><span class='line'><span class="s">done</span>
+</span><span class='line'><span class="s">TIMEEND</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>＜Imlib2＞<br>
+シェルスクリプトから呼び出すPerlスクリプト (resize.pm とします)</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+</pre></td><td class='code'><pre><code class='perl'><span class='line'><span class="c1">#!/usr/bin/env perl</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">use</span> <span class="n">strict</span><span class="p">;</span>
+</span><span class='line'><span class="k">use</span> <span class="nn">Image::</span><span class="n">Imlib2</span><span class="p">;</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">my</span> <span class="nv">$scaledImage</span> <span class="o">=</span> <span class="nn">Image::</span><span class="n">Imlib2</span><span class="o">-&gt;</span><span class="n">load_scale</span><span class="p">(</span><span class="s">&#39;sample.jpg&#39;</span><span class="p">,</span> <span class="mi">640</span><span class="p">,</span> <span class="mi">480</span><span class="p">);</span>
+</span><span class='line'><span class="nv">$scaledImage</span> <span class="o">=</span> <span class="nv">$scaledImage</span><span class="o">-&gt;</span><span class="n">create_scaled_image</span><span class="p">(</span><span class="mi">640</span><span class="p">,</span> <span class="mi">480</span><span class="p">);</span>
+</span><span class='line'><span class="nv">$scaledImage</span><span class="o">-&gt;</span><span class="n">set_quality</span><span class="p">(</span><span class="mi">100</span><span class="p">);</span>
+</span><span class='line'><span class="nv">$scaledImage</span><span class="o">-&gt;</span><span class="n">save</span><span class="p">(</span><span class="s">&#39;sample_resized.jpg&#39;</span><span class="p">);</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>実行するシェルスクリプト</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nb">time</span> /bin/bash <span class="s">&lt;&lt; TIMEEND</span>
+</span><span class='line'><span class="s">for (( i = 0; i &lt; 1000; i++ ))</span>
+</span><span class='line'><span class="s">do</span>
+</span><span class='line'><span class="s">    `dirname $0`/resize.pm</span>
+</span><span class='line'><span class="s">done</span>
+</span><span class='line'><span class="s">TIMEEND</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<h3>結果</h3>
+
+
+<p>＜ImageMagick＞</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>real    1m12.344s
+</span><span class='line'>user    0m58.140s
+</span><span class='line'>sys     0m8.317s
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>＜Imlib2＞</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>real    0m52.510s
+</span><span class='line'>user    0m36.622s
+</span><span class='line'>sys     0m9.565s
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>チューニングしたImageMagickと比較しても、JPEGヒントを利用したImlib2はかなり速いことがわかります。
+画質についても素人目には違いが判りません。</p>
+
+<h2>まとめ</h2>
+
+
+<p>Imlib2はこのように速度が非常に速いことが利点ですが、
+欠点としてはWindowsやMacへ導入するとなると少々面倒くさいので、開発時のデバッグが容易に出来ません。(その点、ImageMagickは簡単に導入できます)
+また、GIF画像の書き出しもサポートしていないので、GIF画像を扱う必要がある場合はImageMagickと併用するなどして対応する必要があります。
+そのため、GIF以外の画像(特にJPEG画像)を多く扱い、速度を追求する必要が有る場合はImlib2の利用をお勧めします。</p>
+
+<p>開発時にWindowsやMacで利用する場合は頑張ってImlib2をインストールするのもありですが、
+どちらかといえばImageMagickとImlib2を同じインターフェースで利用出来るクラスを作成して、環境ごとに切り替えする方がいいかもしれません。
+これについてはJavaのクラスとして近々作成予定ですので、完成次第展開いたします。</p>
+
+<p>今回作成したJPEGヒント対応版のImlib2とImage::Imlib2については以下よりダウンロードしてください。<br></p>
+
+<p><a target="_blank" href="https://github.com/kkoudev/imlib2">Imlib2</a><br>
+<a target="_blank" href="https://github.com/kkoudev/Image-Imlib2">Image::Imlib2</a><br></p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -2933,6 +3164,10 @@ LEFT JOINで結合し、WHERE句でIDが null かどうかを判定すること�
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/06/15/imlib2/">Imlib2とImage::Imlib2のJPEGヒント対応版を作成しました</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/05/26/gradle-filtering-resources/">Gradleでリソースファイルをフィルタリングする場合の注意点</a>
       </li>
     
@@ -2946,10 +3181,6 @@ LEFT JOINで結合し、WHERE句でIDが null かどうかを判定すること�
     
       <li class="post">
         <a href="/blog/2014/03/22/gradle_ide/">GradleでEclipseとIntellij IDEAの開発環境を作る</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2013/09/14/sql/">EXISTSとSQLの高速化について</a>
       </li>
     
   </ul>
