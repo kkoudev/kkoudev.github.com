@@ -4,7 +4,7 @@
   <title><![CDATA[猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-06-16T01:40:03+09:00</updated>
+  <updated>2014-06-16T01:47:48+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -33,7 +33,7 @@ ImageMagickではこの機能をサポートしており、「-define jpeg:size=
 
 <p>ところが、Imlib2にはこのオプションが存在せず、APIにもそれをサポートしたものがありません。
 APIの設計上、JPEGのみに特化した設計にはなっていないというのも理由の１つかも知れませんが、
-JPEGヒントがないImlib2は単純なリサイズですとImageMagickと同等か少し遅くなってしまうため、ベースの速度が速いのにこのままでは非常に勿体ないわけです。<br></p>
+JPEGヒントがないImlib2は単純なリサイズですとJPEGヒントを利用したImageMagickと同等か少し遅くなってしまうため、ベースの速度が速いのにこのままでは非常に勿体ないわけです。<br></p>
 
 <h2>JPEGヒントをサポートしたImlib2の利用</h2>
 
@@ -67,8 +67,9 @@ JPEGヒントがないImlib2は単純なリサイズですとImageMagickと同�
 <h2>チューニング対応したImageMagickとの比較</h2>
 
 
-<p>では、ImageMagickと速度比較してみます。<br>
-ImageMagickで高速化をするためには、以下の設定を予め行ってコンパイルをしておきます。<br></p>
+<p>それでは、ImageMagickと速度比較してみます。<br>
+対等に比較を行うために、まずImageMagickの高速化を測ります。
+具体的には、以下の設定を予め行ってコンパイルをしておきます。<br></p>
 
 <h3>01. 高速化のためのImageMagickのコンパイルオプション</h3>
 
