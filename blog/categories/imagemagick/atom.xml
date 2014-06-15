@@ -4,7 +4,7 @@
   <title><![CDATA[Category: ImageMagick | 猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/blog/categories/imagemagick/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-06-16T01:50:04+09:00</updated>
+  <updated>2014-06-16T01:51:29+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -102,8 +102,11 @@ ldconfig
 具体的には以下の内容のシェルスクリプトを作成して速度比較してみました。<br></p>
 
 <p>＜ImageMagick＞
-``` bash
-time /bin/bash &lt;&lt; TIMEEND
+``` bash</p>
+
+<h1>!/bin/bash</h1>
+
+<p>time /bin/bash &lt;&lt; TIMEEND
 for (( i = 0; i &lt; 1000; i++ ))
 do</p>
 
@@ -130,8 +133,11 @@ $scaledImage->save(&lsquo;sample_resized.jpg&rsquo;);
 ```</p>
 
 <p>実行するシェルスクリプト
-``` bash
-time /bin/bash &lt;&lt; TIMEEND
+``` bash</p>
+
+<h1>!/bin/bash</h1>
+
+<p>time /bin/bash &lt;&lt; TIMEEND
 for (( i = 0; i &lt; 1000; i++ ))
 do</p>
 

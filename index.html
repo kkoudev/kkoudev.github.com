@@ -197,7 +197,11 @@ OpenMPはそのマルチスレッドによる実行時に異常な負荷をあ�
 <span class='line-number'>4</span>
 <span class='line-number'>5</span>
 <span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nb">time</span> /bin/bash <span class="s">&lt;&lt; TIMEEND</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c">#!/bin/bash</span>
+</span><span class='line'>
+</span><span class='line'><span class="nb">time</span> /bin/bash <span class="s">&lt;&lt; TIMEEND</span>
 </span><span class='line'><span class="s">for (( i = 0; i &lt; 1000; i++ ))</span>
 </span><span class='line'><span class="s">do</span>
 </span><span class='line'><span class="s">    convert -define jpeg:size=640x480 -quality 100 -scale 640x480 sample.jpg sample_resized.jpg</span>
@@ -238,7 +242,11 @@ OpenMPはそのマルチスレッドによる実行時に異常な負荷をあ�
 <span class='line-number'>4</span>
 <span class='line-number'>5</span>
 <span class='line-number'>6</span>
-</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nb">time</span> /bin/bash <span class="s">&lt;&lt; TIMEEND</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c">#!/bin/bash</span>
+</span><span class='line'>
+</span><span class='line'><span class="nb">time</span> /bin/bash <span class="s">&lt;&lt; TIMEEND</span>
 </span><span class='line'><span class="s">for (( i = 0; i &lt; 1000; i++ ))</span>
 </span><span class='line'><span class="s">do</span>
 </span><span class='line'><span class="s">    `dirname $0`/resize.pm</span>
