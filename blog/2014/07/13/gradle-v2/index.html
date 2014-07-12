@@ -1,0 +1,373 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Gradle 1.xから2.0へ移行する際に気をつけるべき変更点 - 猫好きモバイルアプリケーション開発者記録</title>
+  <meta name="author" content="kkoudev">
+
+  
+  <meta name="description" content="7/1にGradle 2.0がリリースされました。
+複数の非推奨メソッドの削除が行われたため、
+1.xで動作していたものが、2.0から動かなくなるケースが出てきました。
+全てのケースを紹介しているとキリがないので、
+今回は特に大きいと思われる 2 点の変更点のみ紹介させて頂きます。 &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://kkoudev.github.io/blog/2014/07/13/gradle-v2/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/data-table.css" rel="stylesheet" type="text/css" />
+  <link href="/stylesheets/facebook.css" rel="stylesheet" type="text/css" />
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="猫好きモバイルアプリケーション開発者記録" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">猫好きモバイルアプリケーション開発者記録</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:kkoudev.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Gradle 1.xから2.0へ移行する際に気をつけるべき変更点</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-07-13T02:24:24+09:00" pubdate data-updated="true">Jul 13<span>th</span>, 2014</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>7/1にGradle 2.0がリリースされました。<br>
+複数の非推奨メソッドの削除が行われたため、
+1.xで動作していたものが、2.0から動かなくなるケースが出てきました。
+全てのケースを紹介しているとキリがないので、
+今回は特に大きいと思われる 2 点の変更点のみ紹介させて頂きます。</p>
+
+<h2>変数の直接宣言の非サポート</h2>
+
+
+<p>これは1.10くらいのときから警告が出るようになっていましたが、
+具体的には以下のように変数を宣言するのが無効になりました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="n">project</span><span class="o">.</span><span class="na">myProperty</span> <span class="o">=</span> <span class="s1">&#39;some value&#39;</span>
+</span><span class='line'><span class="k">assert</span> <span class="n">myProperty</span> <span class="o">==</span> <span class="s1">&#39;some value&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>これを解決するには、 extの名前空間で囲むか、defキーワードを指定してローカル変数として宣言します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="c1">// ローカル変数として定義するか</span>
+</span><span class='line'><span class="kt">def</span> <span class="n">myProperty</span> <span class="o">=</span> <span class="s1">&#39;some value&#39;</span>
+</span><span class='line'><span class="k">assert</span> <span class="n">myProperty</span> <span class="o">==</span> <span class="s1">&#39;some value&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// extの名前空間内で宣言するか</span>
+</span><span class='line'><span class="n">ext</span><span class="o">.</span><span class="na">myProperty</span> <span class="o">==</span> <span class="s1">&#39;some value&#39;</span>
+</span><span class='line'><span class="k">assert</span> <span class="n">myProperty</span> <span class="o">==</span> <span class="s1">&#39;some value&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<h2>EclipseとIntellij IDEAでprovidedな依存関係指定時の変更</h2>
+
+
+<p>provided指定の方法は以前の記事でも何度か紹介させて頂きましたが、
+以前までは以下のように指定していました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="n">eclipse</span><span class="o">.</span><span class="na">classpath</span><span class="o">.</span><span class="na">plusConfigurations</span> <span class="o">+=</span> <span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">).</span><span class="na">configurations</span><span class="o">.</span><span class="na">provided</span>
+</span><span class='line'><span class="n">idea</span><span class="o">.</span><span class="na">module</span><span class="o">.</span><span class="na">scopes</span><span class="o">.</span><span class="na">PROVIDED</span><span class="o">.</span><span class="na">plus</span>     <span class="o">+=</span> <span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">).</span><span class="na">configurations</span><span class="o">.</span><span class="na">provided</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>1.xまではこのままでよかったのですが、
+2.0からは += 演算子で configurations の指定を追加する場合、
+以下のように指定します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="n">eclipse</span><span class="o">.</span><span class="na">classpath</span><span class="o">.</span><span class="na">plusConfigurations</span> <span class="o">+=</span> <span class="o">[</span><span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">).</span><span class="na">configurations</span><span class="o">.</span><span class="na">provided</span><span class="o">]</span>
+</span><span class='line'><span class="n">idea</span><span class="o">.</span><span class="na">module</span><span class="o">.</span><span class="na">scopes</span><span class="o">.</span><span class="na">PROVIDED</span><span class="o">.</span><span class="na">plus</span>     <span class="o">+=</span> <span class="o">[</span><span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">).</span><span class="na">configurations</span><span class="o">.</span><span class="na">provided</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>1.xでもこの指定で動作するので、1.xをまだ利用している場合でもこちらの指定に変更するべきでしょう。
+これについては、2.0ではタスク実行時に「You can&rsquo;t change configuration &lsquo;(追加変数名)&rsquo; because it is already resolved!」
+といったようなエラーメッセージが表示されるようになりましたので、
+このエラーが表示されたら上記記載に変更してみましょう。</p>
+
+<h2>まとめ</h2>
+
+
+<p>今回は1.xから2.0へ移行する際にハマるであろうポイントのみ紹介させて頂きました。<br>
+リリースノートにはもっと詳細に紹介されていますので、
+詳しい内容については<a target="_blank" href="http://www.gradle.org/docs/current/release-notes">こちら</a>をご覧ください。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">kkoudev</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-07-13T02:24:24+09:00" pubdate data-updated="true">Jul 13<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/gradle/'>Gradle</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://kkoudev.github.io/blog/2014/07/13/gradle-v2/" data-via="kkoudev" data-counturl="http://kkoudev.github.io/blog/2014/07/13/gradle-v2/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/06/15/imlib2/" title="Previous Post: Imlib2とImage::Imlib2のJPEGヒント対応版を作成しました">&laquo; Imlib2とImage::Imlib2のJPEGヒント対応版を作成しました</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/07/13/gradle-v2/">Gradle 1.xから2.0へ移行する際に気をつけるべき変更点</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/06/15/imlib2/">Imlib2とImage::Imlib2のJPEGヒント対応版を作成しました</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/26/gradle-filtering-resources/">Gradleでリソースファイルをフィルタリングする場合の注意点</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/03/30/gradle-tips/">Gradleで陥りやすい問題点の解決策TIPS集</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/03/24/gradle_build/">Gradleによるビルドとパッケージ作成</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/kkoudev">@kkoudev</a> on GitHub
+  
+  <script type="text/javascript">
+    $.domReady(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'kkoudev',
+            count: 0,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - kkoudev -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+  - <span class="credit">Theme by <a href="http://www.gehaxelt.in">Gehaxelt</a></span>
+  <span class="credit">and <a href="http://www.it-solutions-neef.de">IT Solutions Neef</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'catmobileapp';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://kkoudev.github.io/blog/2014/07/13/gradle-v2/';
+        var disqus_url = 'http://kkoudev.github.io/blog/2014/07/13/gradle-v2/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+
+
+</body>
+</html>

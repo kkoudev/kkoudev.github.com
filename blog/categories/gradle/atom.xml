@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Gradle | 猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/blog/categories/gradle/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-06-16T01:51:29+09:00</updated>
+  <updated>2014-07-13T03:40:03+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -12,6 +12,74 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Gradle 1.xから2.0へ移行する際に気をつけるべき変更点]]></title>
+    <link href="http://kkoudev.github.io/blog/2014/07/13/gradle-v2/"/>
+    <updated>2014-07-13T02:24:24+09:00</updated>
+    <id>http://kkoudev.github.io/blog/2014/07/13/gradle-v2</id>
+    <content type="html"><![CDATA[<p>7/1にGradle 2.0がリリースされました。<br>
+複数の非推奨メソッドの削除が行われたため、
+1.xで動作していたものが、2.0から動かなくなるケースが出てきました。
+全てのケースを紹介しているとキリがないので、
+今回は特に大きいと思われる 2 点の変更点のみ紹介させて頂きます。</p>
+
+<h2>変数の直接宣言の非サポート</h2>
+
+
+<p>これは1.10くらいのときから警告が出るようになっていましたが、
+具体的には以下のように変数を宣言するのが無効になりました。</p>
+
+<p><code>groovy
+project.myProperty = 'some value'
+assert myProperty == 'some value'
+</code></p>
+
+<p>これを解決するには、 extの名前空間で囲むか、defキーワードを指定してローカル変数として宣言します。</p>
+
+<p>```groovy
+// ローカル変数として定義するか
+def myProperty = &lsquo;some value&rsquo;
+assert myProperty == &lsquo;some value&rsquo;</p>
+
+<p>// extの名前空間内で宣言するか
+ext.myProperty == &lsquo;some value&rsquo;
+assert myProperty == &lsquo;some value&rsquo;
+```</p>
+
+<h2>EclipseとIntellij IDEAでprovidedな依存関係指定時の変更</h2>
+
+
+<p>provided指定の方法は以前の記事でも何度か紹介させて頂きましたが、
+以前までは以下のように指定していました。</p>
+
+<p><code>groovy
+eclipse.classpath.plusConfigurations += project(':base').configurations.provided
+idea.module.scopes.PROVIDED.plus     += project(':base').configurations.provided
+</code></p>
+
+<p>1.xまではこのままでよかったのですが、
+2.0からは += 演算子で configurations の指定を追加する場合、
+以下のように指定します。</p>
+
+<p><code>groovy
+eclipse.classpath.plusConfigurations += [project(':base').configurations.provided]
+idea.module.scopes.PROVIDED.plus     += [project(':base').configurations.provided]
+</code></p>
+
+<p>1.xでもこの指定で動作するので、1.xをまだ利用している場合でもこちらの指定に変更するべきでしょう。
+これについては、2.0ではタスク実行時に「You can&rsquo;t change configuration &lsquo;(追加変数名)&rsquo; because it is already resolved!」
+といったようなエラーメッセージが表示されるようになりましたので、
+このエラーが表示されたら上記記載に変更してみましょう。</p>
+
+<h2>まとめ</h2>
+
+
+<p>今回は1.xから2.0へ移行する際にハマるであろうポイントのみ紹介させて頂きました。<br>
+リリースノートにはもっと詳細に紹介されていますので、
+詳しい内容については<a target="_blank" href="http://www.gradle.org/docs/current/release-notes">こちら</a>をご覧ください。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Gradleでリソースファイルをフィルタリングする場合の注意点]]></title>

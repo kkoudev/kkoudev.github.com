@@ -9,10 +9,11 @@
   <meta name="author" content="kkoudev">
 
   
-  <meta name="description" content="久々に作ったものをGithubへ公開しました。
-元ネタは、よくImageMagickと比較される Imlib2 です。
-これのJPEGヒント対応版が欲しくなったので探したのですが、どこにも見当たらなかったのでいっそのこと自分で作りました。
-( &hellip;">
+  <meta name="description" content="7/1にGradle 2.0がリリースされました。
+複数の非推奨メソッドの削除が行われたため、
+1.xで動作していたものが、2.0から動かなくなるケースが出てきました。
+全てのケースを紹介しているとキリがないので、
+今回は特に大きいと思われる 2 点の変更点のみ紹介させて頂きます。 &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -67,6 +68,118 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/07/13/gradle-v2/">Gradle 1.xから2.0へ移行する際に気をつけるべき変更点</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-07-13T02:24:24+09:00" pubdate data-updated="true">Jul 13<span>th</span>, 2014</time>
+        
+         | <a href="/blog/2014/07/13/gradle-v2/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>7/1にGradle 2.0がリリースされました。<br>
+複数の非推奨メソッドの削除が行われたため、
+1.xで動作していたものが、2.0から動かなくなるケースが出てきました。
+全てのケースを紹介しているとキリがないので、
+今回は特に大きいと思われる 2 点の変更点のみ紹介させて頂きます。</p>
+
+<h2>変数の直接宣言の非サポート</h2>
+
+
+<p>これは1.10くらいのときから警告が出るようになっていましたが、
+具体的には以下のように変数を宣言するのが無効になりました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="n">project</span><span class="o">.</span><span class="na">myProperty</span> <span class="o">=</span> <span class="s1">&#39;some value&#39;</span>
+</span><span class='line'><span class="k">assert</span> <span class="n">myProperty</span> <span class="o">==</span> <span class="s1">&#39;some value&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>これを解決するには、 extの名前空間で囲むか、defキーワードを指定してローカル変数として宣言します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="c1">// ローカル変数として定義するか</span>
+</span><span class='line'><span class="kt">def</span> <span class="n">myProperty</span> <span class="o">=</span> <span class="s1">&#39;some value&#39;</span>
+</span><span class='line'><span class="k">assert</span> <span class="n">myProperty</span> <span class="o">==</span> <span class="s1">&#39;some value&#39;</span>
+</span><span class='line'>
+</span><span class='line'><span class="c1">// extの名前空間内で宣言するか</span>
+</span><span class='line'><span class="n">ext</span><span class="o">.</span><span class="na">myProperty</span> <span class="o">==</span> <span class="s1">&#39;some value&#39;</span>
+</span><span class='line'><span class="k">assert</span> <span class="n">myProperty</span> <span class="o">==</span> <span class="s1">&#39;some value&#39;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<h2>EclipseとIntellij IDEAでprovidedな依存関係指定時の変更</h2>
+
+
+<p>provided指定の方法は以前の記事でも何度か紹介させて頂きましたが、
+以前までは以下のように指定していました。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="n">eclipse</span><span class="o">.</span><span class="na">classpath</span><span class="o">.</span><span class="na">plusConfigurations</span> <span class="o">+=</span> <span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">).</span><span class="na">configurations</span><span class="o">.</span><span class="na">provided</span>
+</span><span class='line'><span class="n">idea</span><span class="o">.</span><span class="na">module</span><span class="o">.</span><span class="na">scopes</span><span class="o">.</span><span class="na">PROVIDED</span><span class="o">.</span><span class="na">plus</span>     <span class="o">+=</span> <span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">).</span><span class="na">configurations</span><span class="o">.</span><span class="na">provided</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>1.xまではこのままでよかったのですが、
+2.0からは += 演算子で configurations の指定を追加する場合、
+以下のように指定します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='groovy'><span class='line'><span class="n">eclipse</span><span class="o">.</span><span class="na">classpath</span><span class="o">.</span><span class="na">plusConfigurations</span> <span class="o">+=</span> <span class="o">[</span><span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">).</span><span class="na">configurations</span><span class="o">.</span><span class="na">provided</span><span class="o">]</span>
+</span><span class='line'><span class="n">idea</span><span class="o">.</span><span class="na">module</span><span class="o">.</span><span class="na">scopes</span><span class="o">.</span><span class="na">PROVIDED</span><span class="o">.</span><span class="na">plus</span>     <span class="o">+=</span> <span class="o">[</span><span class="n">project</span><span class="o">(</span><span class="s1">&#39;:base&#39;</span><span class="o">).</span><span class="na">configurations</span><span class="o">.</span><span class="na">provided</span><span class="o">]</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>1.xでもこの指定で動作するので、1.xをまだ利用している場合でもこちらの指定に変更するべきでしょう。
+これについては、2.0ではタスク実行時に「You can&rsquo;t change configuration &lsquo;(追加変数名)&rsquo; because it is already resolved!」
+といったようなエラーメッセージが表示されるようになりましたので、
+このエラーが表示されたら上記記載に変更してみましょう。</p>
+
+<h2>まとめ</h2>
+
+
+<p>今回は1.xから2.0へ移行する際にハマるであろうポイントのみ紹介させて頂きました。<br>
+リリースノートにはもっと詳細に紹介されていますので、
+詳しい内容については<a target="_blank" href="http://www.gradle.org/docs/current/release-notes">こちら</a>をご覧ください。</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -3173,6 +3286,10 @@ LEFT JOINで結合し、WHERE句でIDが null かどうかを判定すること�
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/07/13/gradle-v2/">Gradle 1.xから2.0へ移行する際に気をつけるべき変更点</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/06/15/imlib2/">Imlib2とImage::Imlib2のJPEGヒント対応版を作成しました</a>
       </li>
     
@@ -3186,10 +3303,6 @@ LEFT JOINで結合し、WHERE句でIDが null かどうかを判定すること�
     
       <li class="post">
         <a href="/blog/2014/03/24/gradle_build/">Gradleによるビルドとパッケージ作成</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/03/22/gradle_ide/">GradleでEclipseとIntellij IDEAの開発環境を作る</a>
       </li>
     
   </ul>
