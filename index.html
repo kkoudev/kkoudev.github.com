@@ -9,11 +9,8 @@
   <meta name="author" content="kkoudev">
 
   
-  <meta name="description" content="7/1にGradle 2.0がリリースされました。
-複数の非推奨メソッドの削除が行われたため、
-1.xで動作していたものが、2.0から動かなくなるケースが出てきました。
-全てのケースを紹介しているとキリがないので、
-今回は特に大きいと思われる 2 点の変更点のみ紹介させて頂きます。 &hellip;">
+  <meta name="description" content="Intellij IDEA 13.1.4においてGradleプラグインのデグレが発生しました。
+内容としては、マルチプロジェクトを利用している場合にWARプロジェクトのWebリソースディレクトリ(ex. src/main/webapp) が &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -68,6 +65,67 @@
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2014/08/04/gradle-idea-bug/">Intellij IDEA 13.1.4においてGradleのWebリソースディレクトリがクリアされてしまう不具合</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-08-04T23:24:24+09:00" pubdate data-updated="true">Aug 4<span>th</span>, 2014</time>
+        
+         | <a href="/blog/2014/08/04/gradle-idea-bug/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>Intellij IDEA 13.1.4においてGradleプラグインのデグレが発生しました。<br>
+内容としては、マルチプロジェクトを利用している場合にWARプロジェクトのWebリソースディレクトリ(ex. src/main/webapp) が
+1つのプロジェクトを除いて全てクリアされてしまうというものです。
+13.1がリリースされたばかりのときに同じようにArtifactsが 1 つのプロジェクト分しか作成されないという不具合がありましたが、
+今回はこれのWebリソースディレクトリ版の不具合といったところです。</p>
+
+<p>手動で設定すれば動くようになるけど、再度Gradleプロジェクトのリフレッシュをするとまたしてもクリアされてしまうという酷いもの。
+さすがにこれでは使い物にならないので、バグ報告をしたところ数週間経ってようやく修正されました。
+13.1.5にて修正版が反映されるようですが、13.1.4の状態でも以下のファイルを反映することでこの不具合が解消されます。</p>
+
+<p>＜修正パッチ＞<br>
+<a href="http://youtrack.jetbrains.com/_persistent/ij13-gradle-fix.zip?file=74-179766&v=0&c=true">ここからダウンロード</a></p>
+
+<p>このファイルをダウンロードし、</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>(Intellij IDEA 13のインストール先)/plugins/gradle/lib</span></code></pre></td></tr></table></div></figure>
+
+
+<p>へコピーすることで解消されます。<br></p>
+
+<p>これで問題なく動作することを確認できましたが、
+どうもIntellij IDEAのGradle機能はデグレが多いのと、マルチプロジェクトについては毎回動作確認をしていないと思わせるような印象があります…。
+今後はこのようなクリティカルな不具合がないことを期待したいところです。</p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -3286,6 +3344,10 @@ LEFT JOINで結合し、WHERE句でIDが null かどうかを判定すること�
   <ul id="recent_posts">
     
       <li class="post">
+        <a href="/blog/2014/08/04/gradle-idea-bug/">Intellij IDEA 13.1.4においてGradleのWebリソースディレクトリがクリアされてしまう不具合</a>
+      </li>
+    
+      <li class="post">
         <a href="/blog/2014/07/13/gradle-v2/">Gradle 1.xから2.0へ移行する際に気をつけるべき変更点</a>
       </li>
     
@@ -3299,10 +3361,6 @@ LEFT JOINで結合し、WHERE句でIDが null かどうかを判定すること�
     
       <li class="post">
         <a href="/blog/2014/03/30/gradle-tips/">Gradleで陥りやすい問題点の解決策TIPS集</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/03/24/gradle_build/">Gradleによるビルドとパッケージ作成</a>
       </li>
     
   </ul>

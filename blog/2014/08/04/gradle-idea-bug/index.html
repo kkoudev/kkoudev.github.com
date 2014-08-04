@@ -5,11 +5,12 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Category: Gradle - 猫好きモバイルアプリケーション開発者記録</title>
+  <title>Intellij IDEA 13.1.4においてGradleのWebリソースディレクトリがクリアされてしまう不具合 - 猫好きモバイルアプリケーション開発者記録</title>
   <meta name="author" content="kkoudev">
 
   
-  <meta name="description" content="Category: Gradle">
+  <meta name="description" content="Intellij IDEA 13.1.4においてGradleプラグインのデグレが発生しました。
+内容としては、マルチプロジェクトを利用している場合にWARプロジェクトのWebリソースディレクトリ(ex. src/main/webapp) が &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -18,7 +19,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://kkoudev.github.ioblog/categories/gradle/">
+  <link rel="canonical" href="http://kkoudev.github.io/blog/2014/08/04/gradle-idea-bug/">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/stylesheets/data-table.css" rel="stylesheet" type="text/css" />
@@ -63,106 +64,121 @@
   <div id="main">
     <div id="content">
       <div>
-<article role="article">
+<article class="hentry" role="article">
   
   <header>
-    <h1 class="entry-title">Category: Gradle</h1>
+    
+      <h1 class="entry-title">Intellij IDEA 13.1.4においてGradleのWebリソースディレクトリがクリアされてしまう不具合</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-08-04T23:24:24+09:00" pubdate data-updated="true">Aug 4<span>th</span>, 2014</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
     
   </header>
-  
-  <div id="blog-archives" class="category">
 
 
+<div class="entry-content"><p>Intellij IDEA 13.1.4においてGradleプラグインのデグレが発生しました。<br>
+内容としては、マルチプロジェクトを利用している場合にWARプロジェクトのWebリソースディレクトリ(ex. src/main/webapp) が
+1つのプロジェクトを除いて全てクリアされてしまうというものです。
+13.1がリリースされたばかりのときに同じようにArtifactsが 1 つのプロジェクト分しか作成されないという不具合がありましたが、
+今回はこれのWebリソースディレクトリ版の不具合といったところです。</p>
 
-  
-  <h2>2014</h2>
+<p>手動で設定すれば動くようになるけど、再度Gradleプロジェクトのリフレッシュをするとまたしてもクリアされてしまうという酷いもの。
+さすがにこれでは使い物にならないので、バグ報告をしたところ数週間経ってようやく修正されました。
+13.1.5にて修正版が反映されるようですが、13.1.4の状態でも以下のファイルを反映することでこの不具合が解消されます。</p>
 
-<article>
-  
-<h1><a href="/blog/2014/08/04/gradle-idea-bug/">Intellij IDEA 13.1.4においてGradleのWebリソースディレクトリがクリアされてしまう不具合</a></h1>
-<time datetime="2014-08-04T23:24:24+09:00" pubdate><span class='month'>Aug</span> <span class='day'>04</span> <span class='year'>2014</span></time>
+<p>＜修正パッチ＞<br>
+<a href="http://youtrack.jetbrains.com/_persistent/ij13-gradle-fix.zip?file=74-179766&v=0&c=true">ここからダウンロード</a></p>
 
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/gradle/'>Gradle</a></span>
-</footer>
+<p>このファイルをダウンロードし、</p>
 
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/blog/2014/07/13/gradle-v2/">Gradle 1.xから2.0へ移行する際に気をつけるべき変更点</a></h1>
-<time datetime="2014-07-13T02:24:24+09:00" pubdate><span class='month'>Jul</span> <span class='day'>13</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/gradle/'>Gradle</a></span>
-</footer>
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>(Intellij IDEA 13のインストール先)/plugins/gradle/lib</span></code></pre></td></tr></table></div></figure>
 
 
-</article>
+<p>へコピーすることで解消されます。<br></p>
 
-
-
-<article>
-  
-<h1><a href="/blog/2014/05/26/gradle-filtering-resources/">Gradleでリソースファイルをフィルタリングする場合の注意点</a></h1>
-<time datetime="2014-05-26T01:39:26+09:00" pubdate><span class='month'>May</span> <span class='day'>26</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/gradle/'>Gradle</a></span>
-</footer>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/blog/2014/03/30/gradle-tips/">Gradleで陥りやすい問題点の解決策TIPS集</a></h1>
-<time datetime="2014-03-30T22:45:00+09:00" pubdate><span class='month'>Mar</span> <span class='day'>30</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/gradle/'>Gradle</a></span>
-</footer>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/blog/2014/03/24/gradle_build/">Gradleによるビルドとパッケージ作成</a></h1>
-<time datetime="2014-03-24T21:46:02+09:00" pubdate><span class='month'>Mar</span> <span class='day'>24</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/gradle/'>Gradle</a></span>
-</footer>
-
-
-</article>
-
-
-
-<article>
-  
-<h1><a href="/blog/2014/03/22/gradle_ide/">GradleでEclipseとIntellij IDEAの開発環境を作る</a></h1>
-<time datetime="2014-03-22T01:00:00+09:00" pubdate><span class='month'>Mar</span> <span class='day'>22</span> <span class='year'>2014</span></time>
-
-<footer>
-  <span class="categories">posted in <a class='category' href='/blog/categories/gradle/'>Gradle</a></span>
-</footer>
-
-
-</article>
-
+<p>これで問題なく動作することを確認できましたが、
+どうもIntellij IDEAのGradle機能はデグレが多いのと、マルチプロジェクトについては毎回動作確認をしていないと思わせるような印象があります…。
+今後はこのようなクリティカルな不具合がないことを期待したいところです。</p>
 </div>
 
+
+  <footer>
+    <p class="meta">
+      
   
+
+<span class="byline author vcard">Posted by <span class="fn">kkoudev</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-08-04T23:24:24+09:00" pubdate data-updated="true">Aug 4<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/gradle/'>Gradle</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://kkoudev.github.io/blog/2014/08/04/gradle-idea-bug/" data-via="kkoudev" data-counturl="http://kkoudev.github.io/blog/2014/08/04/gradle-idea-bug/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/07/13/gradle-v2/" title="Previous Post: Gradle 1.xから2.0へ移行する際に気をつけるべき変更点">&laquo; Gradle 1.xから2.0へ移行する際に気をつけるべき変更点</a>
+      
+      
+    </p>
+  </footer>
 </article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
 
 </div>
 
@@ -248,7 +264,10 @@
       var disqus_shortname = 'catmobileapp';
       
         
-        var disqus_script = 'count.js';
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://kkoudev.github.io/blog/2014/08/04/gradle-idea-bug/';
+        var disqus_url = 'http://kkoudev.github.io/blog/2014/08/04/gradle-idea-bug/';
+        var disqus_script = 'embed.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
