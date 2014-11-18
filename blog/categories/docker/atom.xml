@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Docker | 猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/blog/categories/docker/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-11-19T04:01:48+09:00</updated>
+  <updated>2014-11-19T04:13:21+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -95,7 +95,7 @@ RUN /sbin/ldconfig
 <code>/c/Users</code> といったパスでWindows側のファイルへアクセスすることが可能です。<br>
 そのため、今回は Dockerfileを作成した後に、<code>C:\Users\Public\Temp</code>のようなディレクトリを作成しておき、
 そこにDockerfileを置いておきます。<br>
-その上で、以下のコマンドをゲストOSで実行して「test-command」というイメージを作成してみます。</p>
+その上で、以下のコマンドをゲストOSで実行して「test/command」というイメージを作成してみます。</p>
 
 <p><code>bash
 cd /c/Users/Public/Temp
@@ -206,8 +206,9 @@ ssh -o &ldquo;StrictHostKeyChecking=no&rdquo; -o &ldquo;UserKnownHostsFile=/dev/
 <p>これでコンテナに対してコマンドを実行する準備が出来ました。<br>
 試しにImageMagickを実行してみたいと思います。<br></p>
 
-<p>Windows側のファイルをコンテナ内で変換し、更にその結果をWindowsへ返す方法ですが、
-上記のSSHサーバ起動時にマウントした <code>/c/Users/Public/Temp:/HostTemp</code> のディレクトリを利用します。<br>
+<p>ImageMagickはいわずもがな画像変換を行うツールですが、
+コンテナ内で画像を変換してどのようにWindows側へ画像を返すのでしょうか。
+そのためには、上記のSSHサーバ起動時にマウントした <code>/c/Users/Public/Temp:/HostTemp</code> のディレクトリを利用します。<br>
 つまり、<code>C:\Users\Public\Temp</code> に変換したい画像ファイルを予めコピーしておき、
 コンテナ内では <code>/HostTemp</code> というパスで参照および書き込みを行うことで、変換結果をWindows側へ返すことが可能になるわけです。<br></p>
 
