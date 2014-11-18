@@ -1,0 +1,562 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>WindowsからDockerコンテナ内のコマンドを直接実行する - 猫好きモバイルアプリケーション開発者記録</title>
+  <meta name="author" content="kkoudev">
+
+  
+  <meta name="description" content="Dockerを使い始めて最初にひっかかるポイントとしては「WindowsにはDockerクライアントがない」という点です。
+それは boot2docker を導入したところで同じで、Windows上では docker コマンドを結局直接実行することができません。
+どの記事をみても、 &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://kkoudev.github.io/blog/2014/11/16/docker-windows/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/data-table.css" rel="stylesheet" type="text/css" />
+  <link href="/stylesheets/facebook.css" rel="stylesheet" type="text/css" />
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="猫好きモバイルアプリケーション開発者記録" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">猫好きモバイルアプリケーション開発者記録</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:kkoudev.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">WindowsからDockerコンテナ内のコマンドを直接実行する</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-11-16T06:40:55+09:00" pubdate data-updated="true">Nov 16<span>th</span>, 2014</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Dockerを使い始めて最初にひっかかるポイントとしては「WindowsにはDockerクライアントがない」という点です。
+それは boot2docker を導入したところで同じで、Windows上では docker コマンドを結局直接実行することができません。
+どの記事をみても、Windowsで利用する場合は boot2docker ssh してゲストOS(dockerコマンドを実行するための軽量Linux OS)から実行するようなことが紹介されています。
+(次期Windows Serverに docker.exe が付属することが最近発表されましたが、まだいつになるかわかりません)</p>
+
+<p>これではせっかくdockerを導入しようにも「Macを利用しないといけないのか」というお話になり、
+(Macにはdockerクライアントがあるので、dockerコマンドを直接OSX上で実行出来ます)
+大多数いるWindowsユーザを考慮すると、結局開発環境が構築できないから利用をあきらめる、みたいになっている人も多いかもしれません。</p>
+
+<p>もちろん、ApacheやNginxのようなサーバを立ち上げるという用途であるなら、<br>
+boot2docker sshしてゲストOS上でコマンドを叩いてサーバを立ち上げるような用途でも問題なくそのサーバへアクセス出来ますが、<br>
+問題はコンテナ上のコマンドを直接実行したい場合です。<br></p>
+
+<p>例えば以前記事にさせて頂いた「Imlib2」は、Linux上でしか現状利用できません。<br>
+このようなミドルウェアを利用したいケースをカバーできるとしたら docker なわけですが、
+Windows上でdockerコマンドを直接実行できなければWindowsでは利用出来ないのも同じです。</p>
+
+<p>では、そのようなケースをカバーするにはどうすればいいのか。
+それについてご紹介します。</p>
+
+<h2>boot2dockerのインストールとコマンド実行用イメージの作成</h2>
+
+
+<p>まずは boot2docker のインストールです。<br>
+インストールは<a href="http://boot2docker.io" target="_blank">公式サイト</a>のとおり、セットアップ用のexeファイルをダウンロード＆実行してインストールします。</p>
+
+<p>インストール後に、コマンドプロンプトを立ち上げ、以下のコマンドを実行してゲストOSへログインします。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>boot2docker init
+</span><span class='line'>boot2docker up
+</span><span class='line'>boot2docker ssh
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>ゲストOSへログインしましたら、イメージを作成します。<br>
+この辺りは詳しくは紹介しませんが、<br>
+例として以下のようなDockerfileを記述しておきます。<br></p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>FROM tianon/centos:5.8
+</span><span class='line'>
+</span><span class='line'>MAINTAINER kkoudev
+</span><span class='line'>
+</span><span class='line'><span class="c"># Install general commands</span>
+</span><span class='line'>RUN yum groupinstall -y <span class="s2">&quot;Japanese Support&quot;</span>
+</span><span class='line'>RUN yum install -y lrzsz wget vim vim-enhanced openssh openssh-server openssh-clients man mlocate zip unzip rsync perl sysstat bzip2-devel
+</span><span class='line'>RUN yum install -y gcc gcc-c++ make cmake libtool patch ncurses-devel
+</span><span class='line'>
+</span><span class='line'><span class="c"># Lang &amp; Locale</span>
+</span><span class='line'>RUN <span class="nb">echo</span> <span class="s1">&#39;LANG=&quot;ja_JP.UTF-8&quot;&#39;</span> &gt; /etc/sysconfig/i18n
+</span><span class='line'>RUN cp -f /usr/share/zoneinfo/Asia/Tokyo /etc/localtime
+</span><span class='line'>
+</span><span class='line'><span class="c"># Update</span>
+</span><span class='line'>RUN yum update -y bash openssl
+</span><span class='line'>
+</span><span class='line'><span class="c"># Install EPEL</span>
+</span><span class='line'>RUN rpm -ivh --force http://ftp-srv2.kddilabs.jp/Linux/distributions/fedora/epel/5/x86_64/epel-release-5-4.noarch.rpm
+</span><span class='line'>
+</span><span class='line'><span class="c"># Install Tools</span>
+</span><span class='line'>RUN yum --enablerepo<span class="o">=</span>epel install -y git ImageMagick GraphicsMagick
+</span><span class='line'>
+</span><span class='line'><span class="c"># local ldconfig</span>
+</span><span class='line'>RUN <span class="nb">echo</span> <span class="s2">&quot;/usr/local/lib&quot;</span> &gt;&gt; /etc/ld.so.conf.d/local.conf
+</span><span class='line'>RUN <span class="nb">echo</span> <span class="s2">&quot;/usr/local/lib64&quot;</span> &gt;&gt; /etc/ld.so.conf.d/local.conf
+</span><span class='line'>RUN /sbin/ldconfig
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>最新の boot2docker (現時点ではv1.3.1)であれば最初から <code>C:\Users</code>配下のディレクトリがゲストOSにマウントされており、
+<code>/c/Users</code> といったパスでWindows側のファイルへアクセスすることが可能です。<br>
+そのため、今回は Dockerfileを作成した後に、<code>C:\Users\Public\Temp</code>のようなディレクトリを作成しておき、
+そこにDockerfileを置いておきます。<br>
+その上で、以下のコマンドをゲストOSで実行して「test-command」というイメージを作成してみます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nb">cd</span> /c/Users/Public/Temp
+</span><span class='line'>docker build -t <span class="nb">test</span>/command .
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>これで新しいイメージ「test/command」を作成できました。<br></p>
+
+<h2>SSHサーバを立ち上げる</h2>
+
+
+<p>Dockerクライアントが無いのであればどうすればいいのか、
+といいますと、実は単純な話で、SSHサーバをコンテナ内で立ち上げてWindows側からリモートでコンテナに対してコマンドを実行すればいいわけです。
+これであれば、Dockerクライアントがなくてもコマンドを実行できます。
+WindowsでもGit for Windowsをインストールすると ssh のコマンドが付いてきますので、これを利用します。<br></p>
+
+<br>
+
+
+<h3>01. SSH公開鍵と秘密鍵を作成する</h3>
+
+
+<p>まず、Git for Windowsをインストールします。<br>
+こちらも<a href="http://git-scm.com/downloads" target="_blank">公式サイト</a>からダウンロードし、全てデフォルトの設定のままインストールします。<br>
+インストール後、<code>C:\Program Files (x86)\Git\bin</code> を環境変数PATHへ登録しておきます。<br>
+PATHへ登録後、以下のコマンドをコマンドプロンプト上で実行します。<br></p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>mkdir %USERPROFILE%¥.ssh
+</span><span class='line'>ssh-keygen -t rsa
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>パスワードは全て無しで公開鍵と秘密鍵を作成します。<br>
+すると、%USERPROFILE%¥.ssh ディレクトリに「id_rsa」と「id_rsa.pub」ファイルが作成されます。</p>
+
+<h3>02. SSH公開鍵の登録とSSHサーバの起動</h3>
+
+
+<p>SSH公開鍵を作成したあとは、作成した鍵をコンテナ内へインストールしてあげる必要があります。<br>
+そこで、まずは以下のコマンドをゲストOSで実行し、コンテナ内へログインします。<br></p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>docker run -it -v /c/Users:/c/Users <span class="nb">test</span>/command /bin/bash
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>上記のコマンドでログインすると、コンテナ内でも /c/Users へアクセスできるようになっていますので、
+<code>%USERPROFILE%¥.ssh¥id_rsa.pub</code>を以下のコマンドでインストールします。(%USERPROFILE%はWindowsの環境変数のため、当然コンテナ内からは使えないので以下のように直接ユーザディレクトリを指定します)</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>mkdir ~/.ssh
+</span><span class='line'>cat /c/Users/kkoudev/.ssh/id_rsa.pub &gt;&gt; authorized_keys
+</span><span class='line'>chmod 700 ~/.ssh
+</span><span class='line'>chmod 600 ~/.ssh/authorized_keys
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>コンテナから exit でログアウトし、作業した内容を反映するために再度イメージを作り直します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>docker commit <span class="sb">`</span>docker ps -lq<span class="sb">`</span> <span class="nb">test</span>/command
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>これで作成した公開鍵をインストールしたイメージが作成されました。
+準備は完了です。</p>
+
+<p>コンテナ内でSSHサーバを立ち上げるには、以下のようにゲストOSにてdockerコマンドを実行します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>docker run -itd -p 22 -v /c/Users/Public/Temp:/HostTemp --name <span class="nb">test</span>-container <span class="nb">test</span>/command /usr/sbin/sshd -D
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>これで、コンテナ内の22番ポートが、Windows側の49153以上のポート番号へ割り当てられます。
+実際にどのポート番号へ割り当てられたかは docker ps をしてみると、
+「0.0.0.0:49153->22/tcp」と表示されるので、ここで判断します。</p>
+
+<h2>Windows側からコンテナに対してコマンドを実行してみる</h2>
+
+
+<p>いよいよ本番です。
+Windows側からアクセスするには、<br>
+上記の手順で確認した割り当て先ポート番号(49153)と<br>
+ゲストOSのIPが必要になります。
+ゲストOSのIPは以下のコマンドをコマンドプロンプトで実行することで確認できます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bat'><span class='line'>boot<span class="m">2</span>docker ip <span class="m">2</span><span class="p">&gt;</span><span class="n">nul</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>特にバッティング等していなければ 192.168.59.103 が返却されるかと思います。<br>
+そして、以下のようなバッチファイルを作成します。<br>
+(ここではファイル名を <code>container_command.bat</code> と仮定します)</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+</pre></td><td class='code'><pre><code class='bat'><span class='line'><span class="p">@</span><span class="k">echo</span> <span class="k">off</span>
+</span><span class='line'>
+</span><span class='line'><span class="c">rem #---------------------------------------------------------</span>
+</span><span class='line'><span class="c">rem # 各種変数を定義する</span>
+</span><span class='line'><span class="c">rem #</span>
+</span><span class='line'><span class="c">rem # DOCKER_SSH_HOST : コンテナへのSSHアクセス用ホストIP</span>
+</span><span class='line'><span class="c">rem # DOCKER_SSH_PORT : コンテナへのSSHアクセス用ポート番号</span>
+</span><span class='line'><span class="c">rem #---------------------------------------------------------</span>
+</span><span class='line'><span class="k">set</span> <span class="nv">DOCKER_SSH_HOST</span><span class="o">=</span><span class="m">192</span>.<span class="m">168</span>.<span class="m">59</span>.<span class="m">103</span>
+</span><span class='line'><span class="k">set</span> <span class="nv">DOCKER_SSH_PORT</span><span class="o">=</span><span class="m">49153</span>
+</span><span class='line'>
+</span><span class='line'><span class="c">rem # コマンドを実行する</span>
+</span><span class='line'>ssh -o <span class="s2">&quot;StrictHostKeyChecking=no&quot;</span> -o <span class="s2">&quot;UserKnownHostsFile=/dev/null&quot;</span> -o <span class="s2">&quot;LogLevel=QUIET&quot;</span> -i <span class="nv">%USERPROFILE%</span>\.ssh\id_rsa -p <span class="nv">%DOCKER_SSH_PORT%</span> root@<span class="nv">%DOCKER_SSH_HOST%</span> <span class="s2">&quot;%*&quot;</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>これでコンテナに対してコマンドを実行する準備が出来ました。<br>
+試しにImageMagickを実行してみたいと思います。<br></p>
+
+<p>Windows側のファイルをコンテナ内で変換し、更にその結果をWindowsへ返す方法ですが、
+上記のSSHサーバ起動時にマウントした <code>/c/Users/Public/Temp:/HostTemp</code> のディレクトリを利用します。<br>
+つまり、<code>C:\Users\Public\Temp</code> に変換したい画像ファイルを予めコピーしておき、
+コンテナ内では <code>/HostTemp</code> というパスで参照および書き込みを行うことで、変換結果をWindows側へ返すことが可能になるわけです。<br></p>
+
+<p>このことを考慮した上で、Windows側で実際にコンテナ内のコマンドを実行してみます。
+例として、Windows側のマウントディレクトリである<code>C:\Users\Public\Temp</code>に sample.jpg を配置し、
+これをコンテナ内のImageMagickを利用して PNG へ変換します。
+さきほど作成した <code>container_command.bat</code> を使用し、以下のコマンドをWindows側のコマンドプロンプトで実行してみましょう。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bat'><span class='line'>container_command.bat convert <span class="n">/HostTemp/sample.jpg</span> <span class="n">/HostTemp/sample.png</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>実行してみると、<code>C:\Users\Public\Temp</code> に sample.png が作成されていることがわかるかと思います。
+当然ImageMagick以外のコマンドも実行することが可能です。</p>
+
+<h2>まとめ</h2>
+
+
+<p>このように、Windowsでも少し工夫をすることでコンテナ内のコマンドを簡単に実行できるようになります。
+そのためこの方法を使えばLinuxでしか動かないImlib2のようなミドルウェアをWindowsで実行することが出来るようになります。</p>
+
+<p>また、実際にこの方法を利用してプロジェクト等の開発環境を構築する場合は手動で行うと大変面倒なので、
+接続に使用するSSH公開鍵をインストール済みのコンテナを用意し、
+イメージの作成とSSHサーバの起動を自動的に行うスクリプトを作成することをオススメします。<br></p>
+
+<p>一点注意として、SSHでリモートコマンドを実行している関係上、どうしても動作速度はネイティブでコマンドを実行するよりも遅くなってしまいます。
+あくまで本番環境同等の機能をWindowsでも実現したい場合に利用する手段の１つという程度の認識にしておいた方が無難かと思われます。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">kkoudev</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2014-11-16T06:40:55+09:00" pubdate data-updated="true">Nov 16<span>th</span>, 2014</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/docker/'>Docker</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://kkoudev.github.io/blog/2014/11/16/docker-windows/" data-via="kkoudev" data-counturl="http://kkoudev.github.io/blog/2014/11/16/docker-windows/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/08/04/gradle-idea-bug/" title="Previous Post: Intellij IDEA 13.1.4においてGradleのWebリソースディレクトリがクリアされてしまう不具合">&laquo; Intellij IDEA 13.1.4においてGradleのWebリソースディレクトリがクリアされてしまう不具合</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2014/11/16/docker-windows/">WindowsからDockerコンテナ内のコマンドを直接実行する</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/08/04/gradle-idea-bug/">Intellij IDEA 13.1.4においてGradleのWebリソースディレクトリがクリアされてしまう不具合</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/07/13/gradle-v2/">Gradle 1.xから2.0へ移行する際に気をつけるべき変更点</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/06/15/imlib2/">Imlib2とImage::Imlib2のJPEGヒント対応版を作成しました</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/05/26/gradle-filtering-resources/">Gradleでリソースファイルをフィルタリングする場合の注意点</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/kkoudev">@kkoudev</a> on GitHub
+  
+  <script type="text/javascript">
+    $.domReady(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'kkoudev',
+            count: 0,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2014 - kkoudev -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+  - <span class="credit">Theme by <a href="http://www.gehaxelt.in">Gehaxelt</a></span>
+  <span class="credit">and <a href="http://www.it-solutions-neef.de">IT Solutions Neef</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'catmobileapp';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://kkoudev.github.io/blog/2014/11/16/docker-windows/';
+        var disqus_url = 'http://kkoudev.github.io/blog/2014/11/16/docker-windows/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+
+
+</body>
+</html>

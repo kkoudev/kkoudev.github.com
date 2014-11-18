@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+  <title><![CDATA[Category: Docker | 猫好きモバイルアプリケーション開発者記録]]></title>
+  <link href="http://kkoudev.github.io/blog/categories/docker/atom.xml" rel="self"/>
+  <link href="http://kkoudev.github.io/"/>
+  <updated>2014-11-19T04:01:48+09:00</updated>
+  <id>http://kkoudev.github.io/</id>
+  <author>
+    <name><![CDATA[kkoudev]]></name>
+    
+  </author>
+  <generator uri="http://octopress.org/">Octopress</generator>
+
+  
+  <entry>
+    <title type="html"><![CDATA[WindowsからDockerコンテナ内のコマンドを直接実行する]]></title>
+    <link href="http://kkoudev.github.io/blog/2014/11/16/docker-windows/"/>
+    <updated>2014-11-16T06:40:55+09:00</updated>
+    <id>http://kkoudev.github.io/blog/2014/11/16/docker-windows</id>
+    <content type="html"><![CDATA[<p>Dockerを使い始めて最初にひっかかるポイントとしては「WindowsにはDockerクライアントがない」という点です。
+それは boot2docker を導入したところで同じで、Windows上では docker コマンドを結局直接実行することができません。
+どの記事をみても、Windowsで利用する場合は boot2docker ssh してゲストOS(dockerコマンドを実行するための軽量Linux OS)から実行するようなことが紹介されています。
+(次期Windows Serverに docker.exe が付属することが最近発表されましたが、まだいつになるかわかりません)</p>
+
+<p>これではせっかくdockerを導入しようにも「Macを利用しないといけないのか」というお話になり、
+(Macにはdockerクライアントがあるので、dockerコマンドを直接OSX上で実行出来ます)
+大多数いるWindowsユーザを考慮すると、結局開発環境が構築できないから利用をあきらめる、みたいになっている人も多いかもしれません。</p>
+
+<p>もちろん、ApacheやNginxのようなサーバを立ち上げるという用途であるなら、<br>
+boot2docker sshしてゲストOS上でコマンドを叩いてサーバを立ち上げるような用途でも問題なくそのサーバへアクセス出来ますが、<br>
+問題はコンテナ上のコマンドを直接実行したい場合です。<br></p>
+
+<p>例えば以前記事にさせて頂いた「Imlib2」は、Linux上でしか現状利用できません。<br>
+このようなミドルウェアを利用したいケースをカバーできるとしたら docker なわけですが、
+Windows上でdockerコマンドを直接実行できなければWindowsでは利用出来ないのも同じです。</p>
+
+<p>では、そのようなケースをカバーするにはどうすればいいのか。
+それについてご紹介します。</p>
+
+<h2>boot2dockerのインストールとコマンド実行用イメージの作成</h2>
+
+
+<p>まずは boot2docker のインストールです。<br>
+インストールは<a href="http://boot2docker.io" target="_blank">公式サイト</a>のとおり、セットアップ用のexeファイルをダウンロード＆実行してインストールします。</p>
+
+<p>インストール後に、コマンドプロンプトを立ち上げ、以下のコマンドを実行してゲストOSへログインします。</p>
+
+<p><code>bash
+boot2docker init
+boot2docker up
+boot2docker ssh
+</code></p>
+
+<p>ゲストOSへログインしましたら、イメージを作成します。<br>
+この辺りは詳しくは紹介しませんが、<br>
+例として以下のようなDockerfileを記述しておきます。<br></p>
+
+<p>```bash
+FROM tianon/centos:5.8</p>
+
+<p>MAINTAINER kkoudev</p>
+
+<h1>Install general commands</h1>
+
+<p>RUN yum groupinstall -y &ldquo;Japanese Support&rdquo;
+RUN yum install -y lrzsz wget vim vim-enhanced openssh openssh-server openssh-clients man mlocate zip unzip rsync perl sysstat bzip2-devel
+RUN yum install -y gcc gcc-c++ make cmake libtool patch ncurses-devel</p>
+
+<h1>Lang &amp; Locale</h1>
+
+<p>RUN echo &lsquo;LANG=&ldquo;ja_JP.UTF-8&rdquo;&rsquo; > /etc/sysconfig/i18n
+RUN cp -f /usr/share/zoneinfo/Asia/Tokyo /etc/localtime</p>
+
+<h1>Update</h1>
+
+<p>RUN yum update -y bash openssl</p>
+
+<h1>Install EPEL</h1>
+
+<p>RUN rpm -ivh &mdash;force <a href="http://ftp-srv2.kddilabs.jp/Linux/distributions/fedora/epel/5/x86_64/epel-release-5-4.noarch.rpm">http://ftp-srv2.kddilabs.jp/Linux/distributions/fedora/epel/5/x86_64/epel-release-5-4.noarch.rpm</a></p>
+
+<h1>Install Tools</h1>
+
+<p>RUN yum &mdash;enablerepo=epel install -y git ImageMagick GraphicsMagick</p>
+
+<h1>local ldconfig</h1>
+
+<p>RUN echo &ldquo;/usr/local/lib&rdquo; >> /etc/ld.so.conf.d/local.conf
+RUN echo &ldquo;/usr/local/lib64&rdquo; >> /etc/ld.so.conf.d/local.conf
+RUN /sbin/ldconfig
+```</p>
+
+<p>最新の boot2docker (現時点ではv1.3.1)であれば最初から <code>C:\Users</code>配下のディレクトリがゲストOSにマウントされており、
+<code>/c/Users</code> といったパスでWindows側のファイルへアクセスすることが可能です。<br>
+そのため、今回は Dockerfileを作成した後に、<code>C:\Users\Public\Temp</code>のようなディレクトリを作成しておき、
+そこにDockerfileを置いておきます。<br>
+その上で、以下のコマンドをゲストOSで実行して「test-command」というイメージを作成してみます。</p>
+
+<p><code>bash
+cd /c/Users/Public/Temp
+docker build -t test/command .
+</code></p>
+
+<p>これで新しいイメージ「test/command」を作成できました。<br></p>
+
+<h2>SSHサーバを立ち上げる</h2>
+
+
+<p>Dockerクライアントが無いのであればどうすればいいのか、
+といいますと、実は単純な話で、SSHサーバをコンテナ内で立ち上げてWindows側からリモートでコンテナに対してコマンドを実行すればいいわけです。
+これであれば、Dockerクライアントがなくてもコマンドを実行できます。
+WindowsでもGit for Windowsをインストールすると ssh のコマンドが付いてきますので、これを利用します。<br></p>
+
+<br>
+
+
+<h3>01. SSH公開鍵と秘密鍵を作成する</h3>
+
+
+<p>まず、Git for Windowsをインストールします。<br>
+こちらも<a href="http://git-scm.com/downloads" target="_blank">公式サイト</a>からダウンロードし、全てデフォルトの設定のままインストールします。<br>
+インストール後、<code>C:\Program Files (x86)\Git\bin</code> を環境変数PATHへ登録しておきます。<br>
+PATHへ登録後、以下のコマンドをコマンドプロンプト上で実行します。<br></p>
+
+<p><code>bash
+mkdir %USERPROFILE%¥.ssh
+ssh-keygen -t rsa
+</code></p>
+
+<p>パスワードは全て無しで公開鍵と秘密鍵を作成します。<br>
+すると、%USERPROFILE%¥.ssh ディレクトリに「id_rsa」と「id_rsa.pub」ファイルが作成されます。</p>
+
+<h3>02. SSH公開鍵の登録とSSHサーバの起動</h3>
+
+
+<p>SSH公開鍵を作成したあとは、作成した鍵をコンテナ内へインストールしてあげる必要があります。<br>
+そこで、まずは以下のコマンドをゲストOSで実行し、コンテナ内へログインします。<br></p>
+
+<p><code>bash
+docker run -it -v /c/Users:/c/Users test/command /bin/bash
+</code></p>
+
+<p>上記のコマンドでログインすると、コンテナ内でも /c/Users へアクセスできるようになっていますので、
+<code>%USERPROFILE%¥.ssh¥id_rsa.pub</code>を以下のコマンドでインストールします。(%USERPROFILE%はWindowsの環境変数のため、当然コンテナ内からは使えないので以下のように直接ユーザディレクトリを指定します)</p>
+
+<p><code>bash
+mkdir ~/.ssh
+cat /c/Users/kkoudev/.ssh/id_rsa.pub &gt;&gt; authorized_keys
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/authorized_keys
+</code></p>
+
+<p>コンテナから exit でログアウトし、作業した内容を反映するために再度イメージを作り直します。</p>
+
+<p><code>bash
+docker commit `docker ps -lq` test/command
+</code></p>
+
+<p>これで作成した公開鍵をインストールしたイメージが作成されました。
+準備は完了です。</p>
+
+<p>コンテナ内でSSHサーバを立ち上げるには、以下のようにゲストOSにてdockerコマンドを実行します。</p>
+
+<p><code>bash
+docker run -itd -p 22 -v /c/Users/Public/Temp:/HostTemp --name test-container test/command /usr/sbin/sshd -D
+</code></p>
+
+<p>これで、コンテナ内の22番ポートが、Windows側の49153以上のポート番号へ割り当てられます。
+実際にどのポート番号へ割り当てられたかは docker ps をしてみると、
+「0.0.0.0:49153->22/tcp」と表示されるので、ここで判断します。</p>
+
+<h2>Windows側からコンテナに対してコマンドを実行してみる</h2>
+
+
+<p>いよいよ本番です。
+Windows側からアクセスするには、<br>
+上記の手順で確認した割り当て先ポート番号(49153)と<br>
+ゲストOSのIPが必要になります。
+ゲストOSのIPは以下のコマンドをコマンドプロンプトで実行することで確認できます。</p>
+
+<p><code>bat
+boot2docker ip 2&gt;nul
+</code></p>
+
+<p>特にバッティング等していなければ 192.168.59.103 が返却されるかと思います。<br>
+そして、以下のようなバッチファイルを作成します。<br>
+(ここではファイル名を <code>container_command.bat</code> と仮定します)</p>
+
+<p>```bat
+@echo off</p>
+
+<p>rem #&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&ndash;
+rem # 各種変数を定義する
+rem #
+rem # DOCKER_SSH_HOST : コンテナへのSSHアクセス用ホストIP
+rem # DOCKER_SSH_PORT : コンテナへのSSHアクセス用ポート番号
+rem #&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&ndash;
+set DOCKER_SSH_HOST=192.168.59.103
+set DOCKER_SSH_PORT=49153</p>
+
+<p>rem # コマンドを実行する
+ssh -o &ldquo;StrictHostKeyChecking=no&rdquo; -o &ldquo;UserKnownHostsFile=/dev/null&rdquo; -o &ldquo;LogLevel=QUIET&rdquo; -i %USERPROFILE%.ssh\id_rsa -p %DOCKER_SSH_PORT% root@%DOCKER_SSH_HOST% &ldquo;%*&rdquo;
+```</p>
+
+<p>これでコンテナに対してコマンドを実行する準備が出来ました。<br>
+試しにImageMagickを実行してみたいと思います。<br></p>
+
+<p>Windows側のファイルをコンテナ内で変換し、更にその結果をWindowsへ返す方法ですが、
+上記のSSHサーバ起動時にマウントした <code>/c/Users/Public/Temp:/HostTemp</code> のディレクトリを利用します。<br>
+つまり、<code>C:\Users\Public\Temp</code> に変換したい画像ファイルを予めコピーしておき、
+コンテナ内では <code>/HostTemp</code> というパスで参照および書き込みを行うことで、変換結果をWindows側へ返すことが可能になるわけです。<br></p>
+
+<p>このことを考慮した上で、Windows側で実際にコンテナ内のコマンドを実行してみます。
+例として、Windows側のマウントディレクトリである<code>C:\Users\Public\Temp</code>に sample.jpg を配置し、
+これをコンテナ内のImageMagickを利用して PNG へ変換します。
+さきほど作成した <code>container_command.bat</code> を使用し、以下のコマンドをWindows側のコマンドプロンプトで実行してみましょう。</p>
+
+<p><code>bat
+container_command.bat convert /HostTemp/sample.jpg /HostTemp/sample.png
+</code></p>
+
+<p>実行してみると、<code>C:\Users\Public\Temp</code> に sample.png が作成されていることがわかるかと思います。
+当然ImageMagick以外のコマンドも実行することが可能です。</p>
+
+<h2>まとめ</h2>
+
+
+<p>このように、Windowsでも少し工夫をすることでコンテナ内のコマンドを簡単に実行できるようになります。
+そのためこの方法を使えばLinuxでしか動かないImlib2のようなミドルウェアをWindowsで実行することが出来るようになります。</p>
+
+<p>また、実際にこの方法を利用してプロジェクト等の開発環境を構築する場合は手動で行うと大変面倒なので、
+接続に使用するSSH公開鍵をインストール済みのコンテナを用意し、
+イメージの作成とSSHサーバの起動を自動的に行うスクリプトを作成することをオススメします。<br></p>
+
+<p>一点注意として、SSHでリモートコマンドを実行している関係上、どうしても動作速度はネイティブでコマンドを実行するよりも遅くなってしまいます。
+あくまで本番環境同等の機能をWindowsでも実現したい場合に利用する手段の１つという程度の認識にしておいた方が無難かと思われます。</p>
+]]></content>
+  </entry>
+  
+</feed>
