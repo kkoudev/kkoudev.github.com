@@ -4,7 +4,7 @@
   <title><![CDATA[猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2015-09-24T02:38:57+09:00</updated>
+  <updated>2015-09-24T02:48:02+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -682,7 +682,7 @@ Apacheの設定ファイル等を参照できるようにしておきます。
 </span></code></pre></td></tr></table></div></figure>
 
 
-<p>＜Apacheの設定ファイル＞</p>
+<p>＜Apacheの設定ファイルの一部分＞</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 <span class='line-number'>2</span>

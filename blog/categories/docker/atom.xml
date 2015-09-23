@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Docker | 猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/blog/categories/docker/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2015-09-24T02:38:57+09:00</updated>
+  <updated>2015-09-24T02:48:02+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -530,7 +530,7 @@ docker run -p 80:80 -p 443:443 -d \
 $(docker_path /opt/httpd-worker/bin/httpd) -f $(docker_path /(Project Name)/sources/server/conf/apache.local/httpd.conf) -DFOREGROUND
 </code></p>
 
-<p>＜Apacheの設定ファイル＞
+<p>＜Apacheの設定ファイルの一部分＞
 <code>
 ServerRoot /(Project Name)/sources/server
 PidFile /var/run/httpd.pid
