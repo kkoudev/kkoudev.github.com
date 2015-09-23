@@ -616,7 +616,7 @@ Git Bashで管理者として実行を行うためにはどうすればいいの
 <p>-vのように、途中にスペースが入らない場合は先頭のパスだけが対象になります。</p>
 
 <p>また、docker execなどで外部から引数を渡してコマンドを実行したい場合、
-どの部分が絶対パスかコマンドによるので判らないかと思いますが、以下のように指定することで絶対パスを勝手に変換してくれます。</p>
+どの部分が絶対パスかコマンドによるので判らないかと思いますが、以下のように指定することで引数に含まれた絶対パスを全て変換してくれます。</p>
 
 <figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
 </pre></td><td class='code'><pre><code class='bash'><span class='line'>docker <span class="nb">exec</span> -it imlib2-image <span class="k">$(</span>docker_path <span class="s2">&quot;$@&quot;</span><span class="k">)</span>
