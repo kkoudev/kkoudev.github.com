@@ -1,0 +1,987 @@
+
+<!DOCTYPE html>
+<!--[if IEMobile 7 ]><html class="no-js iem7"><![endif]-->
+<!--[if lt IE 9]><html class="no-js lte-ie8"><![endif]-->
+<!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  <title>Dockerを使ってWindowsとMacで共通設定ファイルを利用した開発環境を構築する - 猫好きモバイルアプリケーション開発者記録</title>
+  <meta name="author" content="kkoudev">
+
+  
+  <meta name="description" content="Dockerはバージョン1.8よりDocker Toolboxというものが公式に配布されるようになり、
+WindowsおよびMacの双方でDockerクライアントは然ることながら、docker-machineが利用できるようになりました。
+従来の boot2docker が docker- &hellip;">
+  
+
+  <!-- http://t.co/dKP3o1e -->
+  <meta name="HandheldFriendly" content="True">
+  <meta name="MobileOptimized" content="320">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  
+  <link rel="canonical" href="http://kkoudev.github.io/blog/2015/09/23/docker-development-windows-osx/">
+  <link href="/favicon.png" rel="icon">
+  <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
+  <link href="/stylesheets/data-table.css" rel="stylesheet" type="text/css" />
+  <link href="/stylesheets/facebook.css" rel="stylesheet" type="text/css" />
+  <script src="/javascripts/modernizr-2.0.js"></script>
+  <script src="/javascripts/ender.js"></script>
+  <script src="/javascripts/octopress.js" type="text/javascript"></script>
+  <link href="/atom.xml" rel="alternate" title="猫好きモバイルアプリケーション開発者記録" type="application/atom+xml">
+  <!--Fonts from Google"s Web font directory at http://google.com/webfonts -->
+<link href="http://fonts.googleapis.com/css?family=PT+Serif:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+<link href="http://fonts.googleapis.com/css?family=PT+Sans:regular,italic,bold,bolditalic" rel="stylesheet" type="text/css">
+
+  
+
+</head>
+
+<body   >
+  <header role="banner"><hgroup>
+  <h1><a href="/">猫好きモバイルアプリケーション開発者記録</a></h1>
+  
+</hgroup>
+
+</header>
+  <nav role="navigation"><ul class="subscription" data-subscription="rss">
+  <li><a href="/atom.xml" rel="subscribe-rss" title="subscribe via RSS">RSS</a></li>
+  
+</ul>
+  
+<form action="http://google.com/search" method="get">
+  <fieldset role="search">
+    <input type="hidden" name="q" value="site:kkoudev.github.io" />
+    <input class="search" type="text" name="q" results="0" placeholder="Search"/>
+  </fieldset>
+</form>
+  
+<ul class="main-navigation">
+  <li><a href="/">Blog</a></li>
+  <li><a href="/blog/archives">Archives</a></li>
+</ul>
+
+</nav>
+  <div id="main">
+    <div id="content">
+      <div>
+<article class="hentry" role="article">
+  
+  <header>
+    
+      <h1 class="entry-title">Dockerを使ってWindowsとMacで共通設定ファイルを利用した開発環境を構築する</h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-09-23T22:05:37+09:00" pubdate data-updated="true">Sep 23<span>rd</span>, 2015</time>
+        
+         | <a href="#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+<div class="entry-content"><p>Dockerはバージョン1.8よりDocker Toolboxというものが公式に配布されるようになり、
+WindowsおよびMacの双方でDockerクライアントは然ることながら、docker-machineが利用できるようになりました。
+従来の boot2docker が docker-machine に置き換わることになります。
+WindowsでもDockerクライアントが利用できるようになったということで、以前紹介した「<a href="/blog/2014/11/16/docker-windows/">SSHを使ってWindowsからDockerコンテナ内のコマンドを直接実行する</a>」のような小細工をする必要もなくなったということになります。</p>
+
+<p>さて、突然ですがDockerの最大の売りとは何でしょうか。
+ポータビリティに優れている点、プラットフォームに依存しないアプリケーションの実行、といった点が代表的な利点かと思いますが、
+この利点を普段の開発環境構築において利用してみようというのが今回のテーマです。</p>
+
+<p>私の職場では、Windowsマシンを利用している方とMacを利用している方の両方が存在します。
+どちらか一方に寄せてくれれば大変ありがたいのですが、プロジェクトによってはWindows用のローカル開発環境しか用意されていないこともあるので、
+どちらか一方に寄せるというのも少々難しい問題となっています。
+大抵のケースではMacにParallelsを導入して回避しているのですが、できれば各OS上で動かせると開発はしやすいですよね。</p>
+
+<p>そこでDockerの出番ということになります。
+今回はWindowsとMacで共通の設定ファイルを利用した開発環境を構築する上で留意するべきポイントやテクニックを紹介します。</p>
+
+<h2>1. コンテナ化する部分とコンテナ化しない部分を決定する</h2>
+
+
+<p>Dockerを利用するのであればすべてコンテナ化したいところなのですが、
+IDEでデバッグする利便性を考慮すると、Tomcatサーバのようなアプリケーションサーバ部分はそのままにしておきたいです。
+そうなると、HTTPサーバ(Apache、Nginxなど)とデータベース(MySQL、PostgreSQLなど)のみコンテナ化する必要があります。</p>
+
+<h2>2. ディレクトリ構成は同じにしておく</h2>
+
+
+<p>WindowsとMacで共通の開発環境を構築するためには、ディレクトリ構成を同じにしておく必要があります。
+例えば私の場合は、以下のように各ユーザディレクトリ配下に共通のディレクトリ構成を作成しています。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>(User Directory) - Development - Projects - (Project Name) - tomcat - log
+</span><span class='line'>                                                           - httpd - log
+</span><span class='line'>                                                           - sources - (ソースファイルを格納するディレクトリ)</span></code></pre></td></tr></table></div></figure>
+
+
+<p>とはいえ、ユーザディレクトリ名はユーザごとに異なるため、
+絶対パスを記述しなくてはいけない場合に <code>$HOME</code> の環境変数を直接取得することができないと少々困ります。
+そういう場合は、WindowsとMacでそれぞれ全ユーザの共有ディレクトリが存在するため、そこへシンボリックリンクを作成し、
+その共有ディレクトリ経由のパスを記述します。以下に例を記述します。</p>
+
+<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+</pre></td><td class='code'><pre><code class=''><span class='line'>＜Windows＞
+</span><span class='line'>Users - Public - Development - Projects - (Project Name : symbolic link)
+</span><span class='line'>※上記のProject NameがUser DirectoryにあるProject Nameディレクトリのシンボリックリンクとなる
+</span><span class='line'>
+</span><span class='line'>＜Mac＞
+</span><span class='line'>Users - Shared - Development - Projects - (Project Name : symbolic link)
+</span><span class='line'>※上記のProject NameがUser DirectoryにあるProject Nameディレクトリのシンボリックリンクとなる</span></code></pre></td></tr></table></div></figure>
+
+
+<p>実はVista以降のWindowsとMacはドライブレターの有無の違いはあれど、
+上記のとおり殆ど同じディレクトリ構成を取ることが可能なのです。
+違いがあるのは、共有ディレクトリの名称くらいです。</p>
+
+<h2>3. Private Docker Repositoryを構築する</h2>
+
+
+<p>こちらは特に重要なポイントとなります。
+Private Docker Repositoryがないと長時間のビルドを利用者に強要してしまうことになるのと、msysGitの絶対パス問題(後述で紹介します)が災いして、共通のDockerfileを利用できないケースが出てきてしまうため、可能な限りPrivate Docker Repositoryを用意してください。
+Private Docker Repositoryの構築については<a target="_blank" href="http://dev.classmethod.jp/cloud/docker-registry-recipes/">クラスメソッドさんのブログ</a>で詳しく解説されています。</p>
+
+<p>1つ注意としては、Dockerはプライベートネットワーク上に存在する他のサーバに対して直接アクセスすることができません。
+(やろうと思えばできるかもしれませんが、docker-machine上のOSのIPアドレスを同一ネットワーク上に属させたり、ルーティングの設定をしたりという結構面倒な作業が必要になるかと思いますのでオススメはしません)<br>
+そのため、社内の開発機に構築したところで、その開発機がグローバルからアクセスできないようだと直接利用することができないため注意です。
+グローバルからアクセス可能な箇所にPrivate Docker Repositoryサーバを構築し、サーバ側にIP制限やBASIC認証を掛けて利用しましょう。</p>
+
+<h2>4. シェルスクリプトを利用してWindows用とMac用の処理を記述する</h2>
+
+
+<p>共通のディレクトリ構成を作成したところで、どうしても回避できない環境差異は存在してしまいます。
+そのため、シェルスクリプトを利用してWindows用とMac用の処理を関数内でラップしてしまいましょう。
+(ちなみに、Windowsでシェルスクリプトを実行する場合はGit for Windowsに付属してくるGit Bashを利用します。Docker Toolboxをインストールするときに合わせてインストールされます)<br>
+具体的にWindowsとMacで処理を分けなければならないのは以下の点です。</p>
+
+<h3>4-1. ユーザ共有ディレクトリの取得</h3>
+
+
+<p>こちらは前述のとおり、ユーザ共有ディレクトリの名称が異なるため、
+WindowsとMacで返却する名称を変更する必要があります。</p>
+
+<h3>4-2. シンボリックリンクの作成</h3>
+
+
+<p>Windowsで本物のシンボリックリンクを作成するためにはmklinkコマンドを利用する必要があります。
+Git Bashのlnではシンボリックリンクの作成は行わず、擬似的にコピーを作成するだけになるためです。
+また、シンボリックリンクと似たような機能にジャンクションポイントというものがありますが、
+こちらはDockerコンテナ内から参照できないため利用不可です。</p>
+
+<h3>4-3. 絶対パスの記述がWindowsの場合は異なる</h3>
+
+
+<p>通常だと「/Users」のように絶対パスは記述しますが、Git BashにおいてはmsysGitの仕様上、「//Users」と記述をしなくてはいけません。
+もし「/Users」とGit Bashで記述すると、Git for Windowsのインストールディレクトリからの相対パス(デフォルトだと/Program Files/Git/Users)になってしまいます。</p>
+
+<h3>4-4. ホストOS側のIPアドレスの取得</h3>
+
+
+<p>ここでいうホストOSというのは、WindowsローカルまたはMacローカルのマシンのIPアドレスのことです。(docker-machine ip で取得できるIPアドレスとは異なります)
+このIPアドレスは、Dockerコンテナ内からホストOS側で起動しているTomcat等と連携する場合に必要になります。
+WindowsとMacではネットワークコマンドが根本的に異なるため、こちらもシェルスクリプトで処理を分ける必要があります。</p>
+
+<h3>4-5. Docker環境変数の設定方法</h3>
+
+
+<p>WindowsのGit Bashで <code>eval $(docker-machine env マシン名)</code> を実行すると、<br>
+「On Windows, please specify either &lsquo;cmd&rsquo; or &lsquo;powershell&rsquo; with the &mdash;shell flag.」<bR>
+というように怒られてしまいます。こちらについても対処を行う必要があります。</p>
+
+<h3>4-6. Windowsでシェルスクリプトをプログラム内から呼び出す</h3>
+
+
+<p>Macでは特に問題ありませんが、WindowsだとGit Bashを経由しないとシェルスクリプトは実行できません。
+関連付けの設定を敢えて用意するのでもいいですが、いちいちそれを利用者に行わせるのは面倒なので、
+専用のバッチファイルを用意して対処します。</p>
+
+<br>
+
+
+<p>それでは、上記の問題に対処したラッパー関数を紹介します。<br></p>
+
+<br>
+
+
+<h3>OS判別用共通関数 (この関数は全スクリプトで参照されていることにする)</h3>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c">#---------------------------------------</span>
+</span><span class='line'><span class="c"># OS種別名を取得する。</span>
+</span><span class='line'><span class="c">#</span>
+</span><span class='line'><span class="c"># [Arguments]</span>
+</span><span class='line'><span class="c"># なし</span>
+</span><span class='line'><span class="c">#</span>
+</span><span class='line'><span class="c"># [Return]</span>
+</span><span class='line'><span class="c"># OS名 (osx or win)</span>
+</span><span class='line'><span class="c">#---------------------------------------</span>
+</span><span class='line'><span class="k">function </span>os_name <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c"># WindowsのmsysGit経由で実行されているかどうかを調べる</span>
+</span><span class='line'>    uname | grep -E <span class="s1">&#39;^MINGW&#39;</span> &gt; /dev/null 2&gt;&amp;1
+</span><span class='line'>
+</span><span class='line'>    <span class="c"># WindowsのmsysGit経由の場合</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">[[</span> <span class="nv">$?</span> -eq 0 <span class="o">]]</span>; <span class="k">then</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c"># Windowsとして出力する</span>
+</span><span class='line'>        <span class="nb">echo</span> <span class="s1">&#39;win&#39;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c"># OSXの場合</span>
+</span><span class='line'>    <span class="k">elif</span> <span class="o">[[</span> <span class="k">$(</span>uname<span class="k">)</span> <span class="o">=</span> <span class="s1">&#39;Darwin&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c"># OSXとして出力する</span>
+</span><span class='line'>        <span class="nb">echo</span> <span class="s1">&#39;osx&#39;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">else</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c"># サポート外プラットフォームとして出力する</span>
+</span><span class='line'>        <span class="nb">echo</span> <span class="s1">&#39;unknown&#39;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">fi</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<h3>4-1. ユーザ共有ディレクトリの取得</h3>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c">#---------------------------------------</span>
+</span><span class='line'><span class="c"># ユーザ共有ディレクトリを取得する。</span>
+</span><span class='line'><span class="c">#</span>
+</span><span class='line'><span class="c"># [Arguments]</span>
+</span><span class='line'><span class="c"># なし</span>
+</span><span class='line'><span class="c">#</span>
+</span><span class='line'><span class="c"># [Return]</span>
+</span><span class='line'><span class="c"># ユーザ共有ディレクトリパス</span>
+</span><span class='line'><span class="c">#---------------------------------------</span>
+</span><span class='line'><span class="k">function </span>share_dir <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c"># OS別処理</span>
+</span><span class='line'>    <span class="k">case</span> <span class="k">$(</span>os_name<span class="k">)</span> in
+</span><span class='line'>
+</span><span class='line'>    <span class="c"># OSX</span>
+</span><span class='line'>    osx<span class="o">)</span>
+</span><span class='line'>        <span class="nb">echo</span> <span class="s2">&quot;$(cd ${HOME}/../ &amp;&amp; pwd)/Shared&quot;</span>
+</span><span class='line'>        ;;
+</span><span class='line'>
+</span><span class='line'>    <span class="c"># Windows</span>
+</span><span class='line'>    win<span class="o">)</span>
+</span><span class='line'>        <span class="nb">echo</span> <span class="s2">&quot;$(cd ${HOME}/../ &amp;&amp; pwd)/Public&quot;</span>
+</span><span class='line'>        ;;
+</span><span class='line'>
+</span><span class='line'>    <span class="c"># その他</span>
+</span><span class='line'>    *<span class="o">)</span>
+</span><span class='line'>        <span class="nb">echo</span> <span class="s2">&quot;Unknown platform&quot;</span>
+</span><span class='line'>        ;;
+</span><span class='line'>
+</span><span class='line'>    <span class="k">esac</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<h3>4-2. シンボリックリンクの作成・削除</h3>
+
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+<span class='line-number'>33</span>
+<span class='line-number'>34</span>
+<span class='line-number'>35</span>
+<span class='line-number'>36</span>
+<span class='line-number'>37</span>
+<span class='line-number'>38</span>
+<span class='line-number'>39</span>
+<span class='line-number'>40</span>
+<span class='line-number'>41</span>
+<span class='line-number'>42</span>
+<span class='line-number'>43</span>
+<span class='line-number'>44</span>
+<span class='line-number'>45</span>
+<span class='line-number'>46</span>
+<span class='line-number'>47</span>
+<span class='line-number'>48</span>
+<span class='line-number'>49</span>
+<span class='line-number'>50</span>
+<span class='line-number'>51</span>
+<span class='line-number'>52</span>
+<span class='line-number'>53</span>
+<span class='line-number'>54</span>
+<span class='line-number'>55</span>
+<span class='line-number'>56</span>
+<span class='line-number'>57</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c">#---------------------------------------</span>
+</span><span class='line'><span class="c"># シンボリックリンクを作成する。</span>
+</span><span class='line'><span class="c">#</span>
+</span><span class='line'><span class="c"># [Arguments]</span>
+</span><span class='line'><span class="c"># 1 : リンク名称</span>
+</span><span class='line'><span class="c"># 2 : リンクターゲット</span>
+</span><span class='line'><span class="c">#</span>
+</span><span class='line'><span class="c"># [Return]</span>
+</span><span class='line'><span class="c"># なし</span>
+</span><span class='line'><span class="c">#---------------------------------------</span>
+</span><span class='line'><span class="k">function </span>mklink <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c"># Windowsの場合</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">[[</span> <span class="k">$(</span>os_name<span class="k">)</span> <span class="o">=</span> <span class="s1">&#39;win&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c"># ドライブレターをWindows形式に変換する</span>
+</span><span class='line'>        <span class="nb">local </span><span class="nv">work_link</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;$1&quot;</span> | sed -E <span class="s1">&#39;s;^/([a-zA-Z]);\1:;g&#39;</span><span class="k">)</span>
+</span><span class='line'>        <span class="nb">local </span><span class="nv">work_target</span><span class="o">=</span><span class="k">$(</span><span class="nb">echo</span> <span class="s2">&quot;$2&quot;</span> | sed -E <span class="s1">&#39;s;^/([a-zA-Z]);\1:;g&#39;</span><span class="k">)</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c"># ターゲットがディレクトリの場合</span>
+</span><span class='line'>        <span class="k">if</span> <span class="o">[[</span> -d <span class="s2">&quot;$2&quot;</span> <span class="o">]]</span>; <span class="k">then</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="c"># ディレクトリのシンボリックリンクを作成する</span>
+</span><span class='line'>            cmd <span class="o">&lt;&lt;&lt;</span> <span class="s2">&quot;mklink /D \&quot;${work_link//\//\\}\&quot; \&quot;${work_target//\//\\}\&quot;&quot;</span> &gt; /dev/null
+</span><span class='line'>
+</span><span class='line'>        <span class="k">else</span>
+</span><span class='line'>
+</span><span class='line'>            <span class="c"># ファイルのシンボリックリンクを作成する</span>
+</span><span class='line'>            cmd <span class="o">&lt;&lt;&lt;</span> <span class="s2">&quot;mklink \&quot;${work_link//\//\\}\&quot; \&quot;${work_target//\//\\}\&quot;&quot;</span> &gt; /dev/null
+</span><span class='line'>
+</span><span class='line'>        <span class="k">fi</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">    else</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c"># lnコマンドでシンボリックリンクを作成する</span>
+</span><span class='line'>        ln -s <span class="s2">&quot;$2&quot;</span> <span class="s2">&quot;$1&quot;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">fi</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span><span class='line'>
+</span><span class='line'>
+</span><span class='line'><span class="c">#---------------------------------------</span>
+</span><span class='line'><span class="c"># シンボリックリンクを削除する。</span>
+</span><span class='line'><span class="c">#</span>
+</span><span class='line'><span class="c"># [Arguments]</span>
+</span><span class='line'><span class="c"># 1 : リンクパス</span>
+</span><span class='line'><span class="c">#</span>
+</span><span class='line'><span class="c"># [Return]</span>
+</span><span class='line'><span class="c"># なし</span>
+</span><span class='line'><span class="c">#---------------------------------------</span>
+</span><span class='line'><span class="k">function </span>rmlink <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c"># こちらは敢えて関数化する必要はないが、mklinkとの対比のために用意しておく</span>
+</span><span class='line'>    rm -f <span class="s2">&quot;$1&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>紹介している関数mklinkではlnコマンドと引数が逆なので、<br>
+分かりづらい場合は上記関数を修正してみてください。</p>
+
+<p>また、1点Windowsの問題として、mklinkコマンドは「管理者として実行」を行わないと実行できません。
+Git Bashで管理者として実行を行うためにはどうすればいいのでしょうか。
+簡単な方法としては、以下のような「管理者として実行」を行うためのスクリプト(sudo.sh)を用意します。</p>
+
+<p><strong>シェルスクリプトを管理者として実行するためのスクリプト (sudo.sh)</strong><br></p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c"># Windowsの場合</span>
+</span><span class='line'><span class="k">if</span> <span class="o">[[</span> <span class="k">$(</span>os_name<span class="k">)</span> <span class="o">=</span> <span class="s1">&#39;win&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c"># 管理者権限で実行する</span>
+</span><span class='line'>    powershell -command <span class="s2">&quot;Start-Process -wait \&quot;C:\Program Files\Git\bin\bash.exe\&quot; -argumentlist \&quot;--login -i $1\&quot; -Verb runas&quot;</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">else</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c"># そのまま実行する</span>
+</span><span class='line'>    . <span class="nv">$1</span>
+</span><span class='line'>
+</span><span class='line'><span class="k">fi</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>上記スクリプトを利用して、以下のように実行します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>./sudo.sh <span class="o">(</span>管理者として実行したいシェルスクリプトファイル<span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>こうすることで、mklinkコマンドをシェルスクリプト内で実行することが可能になります。
+(実行時に管理者として実行するかどうかの確認ダイアログが表示されます)</p>
+
+<h3>4-3. 絶対パスの記述を変換する関数</h3>
+
+
+<p>以下のような関数を使って、引数に含まれる絶対パスを修正します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c">#---------------------------------------</span>
+</span><span class='line'><span class="c"># Dockerで利用するファイルパスを取得する。</span>
+</span><span class='line'><span class="c">#</span>
+</span><span class='line'><span class="c"># Windows版Dockerで、かつmsysGit経由で実行している場合のみ有効となる。</span>
+</span><span class='line'><span class="c"># msysGit経由の場合、単一の開始スラッシュはmsysGitインストールディレクトリからの相対パスとなるため、</span>
+</span><span class='line'><span class="c"># 開始スラッシュを 2 つにする必要がある。</span>
+</span><span class='line'><span class="c">#</span>
+</span><span class='line'><span class="c"># [Arguments]</span>
+</span><span class='line'><span class="c"># 1 : 変換するファイルパス (絶対パス)</span>
+</span><span class='line'><span class="c">#</span>
+</span><span class='line'><span class="c"># [Return]</span>
+</span><span class='line'><span class="c"># Dockerで利用するファイルパス</span>
+</span><span class='line'><span class="c">#---------------------------------------</span>
+</span><span class='line'><span class="k">function </span>docker_path <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c"># Windowsの場合</span>
+</span><span class='line'>    <span class="k">if</span> <span class="o">[[</span> <span class="k">$(</span>os_name<span class="k">)</span> <span class="o">=</span> <span class="s1">&#39;win&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c"># 単一スラッシュで開始するパラメータをスラッシュ2つに変更する</span>
+</span><span class='line'>        <span class="nb">echo</span> <span class="s2">&quot;$@&quot;</span> | sed -E <span class="s1">&#39;s;^/([a-zA-Z_\-\.]);//\1;g&#39;</span> | sed -E <span class="s1">&#39;s; /([a-zA-Z_\-\.]); //\1;g&#39;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">else</span>
+</span><span class='line'>
+</span><span class='line'>        <span class="c"># そのまま出力する</span>
+</span><span class='line'>        <span class="nb">echo</span> <span class="s2">&quot;$@&quot;</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="k">fi</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>絶対ファイルパスを利用する箇所で以下のように利用します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>docker run -it -v <span class="k">$(</span>docker_path /c/Users/kkoudev/Temp<span class="k">)</span>:/Temp debian:wheezy bash
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>-vのように、途中にスペースが入らない場合は先頭のパスだけが対象になります。</p>
+
+<p>また、docker execなどで外部から引数を渡してコマンドを実行したい場合、
+どの部分が絶対パスかコマンドによるので判らないかと思いますが、以下のように指定することで絶対パスを勝手に変換してくれます。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>docker <span class="nb">exec</span> -it imlib2-image <span class="k">$(</span>docker_path <span class="s2">&quot;$@&quot;</span><span class="k">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<h3>4-4. ホストOS側のIPアドレスの取得</h3>
+
+
+<p>ホストOS側のIPが複数ある場合は、最初にヒットするIPアドレスを返却するようになっています。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+<span class='line-number'>5</span>
+<span class='line-number'>6</span>
+<span class='line-number'>7</span>
+<span class='line-number'>8</span>
+<span class='line-number'>9</span>
+<span class='line-number'>10</span>
+<span class='line-number'>11</span>
+<span class='line-number'>12</span>
+<span class='line-number'>13</span>
+<span class='line-number'>14</span>
+<span class='line-number'>15</span>
+<span class='line-number'>16</span>
+<span class='line-number'>17</span>
+<span class='line-number'>18</span>
+<span class='line-number'>19</span>
+<span class='line-number'>20</span>
+<span class='line-number'>21</span>
+<span class='line-number'>22</span>
+<span class='line-number'>23</span>
+<span class='line-number'>24</span>
+<span class='line-number'>25</span>
+<span class='line-number'>26</span>
+<span class='line-number'>27</span>
+<span class='line-number'>28</span>
+<span class='line-number'>29</span>
+<span class='line-number'>30</span>
+<span class='line-number'>31</span>
+<span class='line-number'>32</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="c">#---------------------------------------</span>
+</span><span class='line'><span class="c"># HostのIPを取得する</span>
+</span><span class='line'><span class="c">#</span>
+</span><span class='line'><span class="c"># [Arguments]</span>
+</span><span class='line'><span class="c"># なし</span>
+</span><span class='line'><span class="c">#</span>
+</span><span class='line'><span class="c"># [Return]</span>
+</span><span class='line'><span class="c"># HostのIP</span>
+</span><span class='line'><span class="c">#---------------------------------------</span>
+</span><span class='line'><span class="k">function </span>host_ip <span class="o">{</span>
+</span><span class='line'>
+</span><span class='line'>    <span class="c"># OS別処理</span>
+</span><span class='line'>    <span class="k">case</span> <span class="k">$(</span>os_name<span class="k">)</span> in
+</span><span class='line'>
+</span><span class='line'>    <span class="c"># OSX</span>
+</span><span class='line'>    osx<span class="o">)</span>
+</span><span class='line'>        ipconfig getifaddr <span class="k">$(</span>netstat -rn -f inet | awk <span class="s1">&#39;/^default/{print $6; exit}&#39;</span><span class="k">)</span>
+</span><span class='line'>        ;;
+</span><span class='line'>
+</span><span class='line'>    <span class="c"># Windows</span>
+</span><span class='line'>    win<span class="o">)</span>
+</span><span class='line'>        ipconfig | grep -a IPv4 | head -n 1 | awk -F <span class="s1">&#39;: &#39;</span> <span class="s1">&#39;{print $2}&#39;</span>
+</span><span class='line'>        ;;
+</span><span class='line'>
+</span><span class='line'>    <span class="c"># その他</span>
+</span><span class='line'>    *<span class="o">)</span>
+</span><span class='line'>        <span class="nb">echo</span> <span class="s2">&quot;Unknown platform&quot;</span>
+</span><span class='line'>        ;;
+</span><span class='line'>
+</span><span class='line'>    <span class="k">esac</span>
+</span><span class='line'>
+</span><span class='line'><span class="o">}</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<h3>4-5. Docker環境変数の設定方法</h3>
+
+
+<p>実はこちらは &mdash;shell オプションを明示すれば特別処理を分ける必要はありません。<br>
+以下のように指定します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'><span class="nb">eval</span> <span class="k">$(</span>docker-machine env --shell<span class="o">=</span>sh <span class="o">(</span>マシン名<span class="k">)</span><span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+
+
+<h3>4-6. Windowsでシェルスクリプトをプログラム内から呼び出す</h3>
+
+
+<p>以下のようなバッチファイル(bash.bat)を用意します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>@echo off
+</span><span class='line'>
+</span><span class='line'><span class="s2">&quot;C:\Program Files\Git\bin\bash.exe&quot;</span> --login %*
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>シェルスクリプトをプログラム内から実行する場合は、以下のコマンドを実行します。</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>bash.bat <span class="o">(</span>実行するシェルスクリプトのファイルパス<span class="o">)</span>
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>以上、紹介した関数があれば大抵のプラットフォーム差異は吸収することが可能です。</p>
+
+<h2>5. 設定ファイルはホスト側にあるソースファイルリポジトリから参照する</h2>
+
+
+<p>各コンテナ起動時に、ホスト側のボリュームをマウントし、ソースファイルリポジトリで管理されている
+Apacheの設定ファイル等を参照できるようにしておきます。
+このとき、Apacheの設定ファイル内でログ出力先をマウントしたホスト側ボリュームとしておけば、
+わざわざコンテナ内に入らなくてもログを閲覧できます。<br>
+以下はコンテナ起動時のコマンドとApacheの設定ファイルにおける記述例です。<br>
+(ここまでに紹介した関数を利用しています)</p>
+
+<p>＜起動コマンド＞</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+<span class='line-number'>4</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>docker run -p 80:80 -p 443:443 -d <span class="se">\</span>
+</span><span class='line'>--add-host<span class="o">=</span>docker.host:<span class="k">$(</span>host_ip<span class="k">)</span> <span class="se">\</span>
+</span><span class='line'>-v <span class="k">$(</span>docker_path <span class="k">$(</span>share_dir<span class="k">)</span>/Development/Projects/<span class="o">(</span>Project Name<span class="k">)</span><span class="o">)</span>:/<span class="o">(</span>Project Name<span class="o">)</span> httpd-2.2 <span class="se">\</span>
+</span><span class='line'><span class="k">$(</span>docker_path /opt/httpd-worker/bin/httpd<span class="k">)</span> -f <span class="k">$(</span>docker_path /<span class="o">(</span>Project Name<span class="k">)</span>/sources/server/conf/apache.local/httpd.conf<span class="o">)</span> -DFOREGROUND
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p>＜Apacheの設定ファイル＞</p>
+
+<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
+<span class='line-number'>2</span>
+<span class='line-number'>3</span>
+</pre></td><td class='code'><pre><code class='bash'><span class='line'>ServerRoot /<span class="o">(</span>Project Name<span class="o">)</span>/sources/server
+</span><span class='line'>PidFile /var/run/httpd.pid
+</span><span class='line'>ErrorLog /<span class="o">(</span>Project Name<span class="o">)</span>/httpd/log/error_log
+</span></code></pre></td></tr></table></div></figure>
+
+
+<p><strong>※(Project Name)には任意の名称を入れてください</strong></p>
+
+<p>こちらは最初に紹介したディレクトリ構成が元となっています。
+/(Project Name) でコンテナ内からプロジェクト配下のディレクトリを全てアクセスできるようにしておくことで
+ホスト側からソースファイルリポジトリで管理されている設定ファイルを読み込んでサーバを起動することができます。</p>
+
+<p>また、&mdash;add-hostを利用することで、IPアドレスではなくホスト名で設定ファイル内からアクセスを行うことが可能になります。
+Dockerコンテナ内のApacheからホスト側で起動しているTomcatへ連携する場合は、
+ここで定義した名前をApache設定ファイル内に記述して連携します。</p>
+
+<h2>まとめ</h2>
+
+
+<p>上記で紹介したテクニックとポイントを抑えておけば<br>
+共通の設定ファイルを利用してWindowsとMacの開発環境を構築することが可能になります。<br>
+WindowsとMacが混在しているような現場では大いに役立つと思いますので、是非活用してみてください。</p>
+</div>
+
+
+  <footer>
+    <p class="meta">
+      
+  
+
+<span class="byline author vcard">Posted by <span class="fn">kkoudev</span></span>
+
+      
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2015-09-23T22:05:37+09:00" pubdate data-updated="true">Sep 23<span>rd</span>, 2015</time>
+      
+
+<span class="categories">
+  
+    <a class='category' href='/blog/categories/docker/'>Docker</a>
+  
+</span>
+
+
+    </p>
+    
+      <div class="sharing">
+  
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://kkoudev.github.io/blog/2015/09/23/docker-development-windows-osx/" data-via="kkoudev" data-counturl="http://kkoudev.github.io/blog/2015/09/23/docker-development-windows-osx/" >Tweet</a>
+  
+  
+  <div class="g-plusone" data-size="medium"></div>
+  
+  
+    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
+  
+</div>
+
+
+    
+    <p class="meta">
+      
+        <a class="basic-alignment left" href="/blog/2014/11/16/docker-windows/" title="Previous Post: SSHを使ってWindowsからDockerコンテナ内のコマンドを直接実行する">&laquo; SSHを使ってWindowsからDockerコンテナ内のコマンドを直接実行する</a>
+      
+      
+    </p>
+  </footer>
+</article>
+
+  <section>
+    <h1>Comments</h1>
+    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+</div>
+  </section>
+
+</div>
+
+<aside class="sidebar">
+  
+    <section>
+  <h1>Recent Posts</h1>
+  <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2015/09/23/docker-development-windows-osx/">Dockerを使ってWindowsとMacで共通設定ファイルを利用した開発環境を構築する</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/11/16/docker-windows/">SSHを使ってWindowsからDockerコンテナ内のコマンドを直接実行する</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/08/04/gradle-idea-bug/">Intellij IDEA 13.1.4においてGradleのWebリソースディレクトリがクリアされてしまう不具合</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/07/13/gradle-v2/">Gradle 1.xから2.0へ移行する際に気をつけるべき変更点</a>
+      </li>
+    
+      <li class="post">
+        <a href="/blog/2014/06/15/imlib2/">Imlib2とImage::Imlib2のJPEGヒント対応版を作成しました</a>
+      </li>
+    
+  </ul>
+</section>
+
+<section>
+  <h1>GitHub Repos</h1>
+  <ul id="gh_repos">
+    <li class="loading">Status updating...</li>
+  </ul>
+  
+  <a href="https://github.com/kkoudev">@kkoudev</a> on GitHub
+  
+  <script type="text/javascript">
+    $.domReady(function(){
+        if (!window.jXHR){
+            var jxhr = document.createElement('script');
+            jxhr.type = 'text/javascript';
+            jxhr.src = '/javascripts/libs/jXHR.js';
+            var s = document.getElementsByTagName('script')[0];
+            s.parentNode.insertBefore(jxhr, s);
+        }
+
+        github.showRepos({
+            user: 'kkoudev',
+            count: 0,
+            skip_forks: true,
+            target: '#gh_repos'
+        });
+    });
+  </script>
+  <script src="/javascripts/github.js" type="text/javascript"> </script>
+</section>
+
+
+
+
+
+  
+</aside>
+
+
+    </div>
+  </div>
+  <footer role="contentinfo"><p>
+  Copyright &copy; 2015 - kkoudev -
+  <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
+  - <span class="credit">Theme by <a href="http://www.gehaxelt.in">Gehaxelt</a></span>
+  <span class="credit">and <a href="http://www.it-solutions-neef.de">IT Solutions Neef</a></span>
+</p>
+
+</footer>
+  
+
+<script type="text/javascript">
+      var disqus_shortname = 'catmobileapp';
+      
+        
+        // var disqus_developer = 1;
+        var disqus_identifier = 'http://kkoudev.github.io/blog/2015/09/23/docker-development-windows-osx/';
+        var disqus_url = 'http://kkoudev.github.io/blog/2015/09/23/docker-development-windows-osx/';
+        var disqus_script = 'embed.js';
+      
+    (function () {
+      var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+      dsq.src = 'http://' + disqus_shortname + '.disqus.com/' + disqus_script;
+      (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+    }());
+</script>
+
+
+
+<div id="fb-root"></div>
+<script>(function(d, s, id) {
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/all.js#appId=212934732101925&xfbml=1";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));</script>
+
+
+
+  <script type="text/javascript">
+    (function() {
+      var script = document.createElement('script'); script.type = 'text/javascript'; script.async = true;
+      script.src = 'https://apis.google.com/js/plusone.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(script, s);
+    })();
+  </script>
+
+
+
+  <script type="text/javascript">
+    (function(){
+      var twitterWidgets = document.createElement('script');
+      twitterWidgets.type = 'text/javascript';
+      twitterWidgets.async = true;
+      twitterWidgets.src = 'http://platform.twitter.com/widgets.js';
+      document.getElementsByTagName('head')[0].appendChild(twitterWidgets);
+    })();
+  </script>
+
+
+
+
+
+
+
+</body>
+</html>

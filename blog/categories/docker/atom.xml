@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Docker | 猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/blog/categories/docker/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2014-11-24T14:28:18+09:00</updated>
+  <updated>2015-09-24T01:58:45+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -12,6 +12,549 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[Dockerを使ってWindowsとMacで共通設定ファイルを利用した開発環境を構築する]]></title>
+    <link href="http://kkoudev.github.io/blog/2015/09/23/docker-development-windows-osx/"/>
+    <updated>2015-09-23T22:05:37+09:00</updated>
+    <id>http://kkoudev.github.io/blog/2015/09/23/docker-development-windows-osx</id>
+    <content type="html"><![CDATA[<p>Dockerはバージョン1.8よりDocker Toolboxというものが公式に配布されるようになり、
+WindowsおよびMacの双方でDockerクライアントは然ることながら、docker-machineが利用できるようになりました。
+従来の boot2docker が docker-machine に置き換わることになります。
+WindowsでもDockerクライアントが利用できるようになったということで、以前紹介した「<a href="http://kkoudev.github.io/blog/2014/11/16/docker-windows/">SSHを使ってWindowsからDockerコンテナ内のコマンドを直接実行する</a>」のような小細工をする必要もなくなったということになります。</p>
+
+<p>さて、突然ですがDockerの最大の売りとは何でしょうか。
+ポータビリティに優れている点、プラットフォームに依存しないアプリケーションの実行、といった点が代表的な利点かと思いますが、
+この利点を普段の開発環境構築において利用してみようというのが今回のテーマです。</p>
+
+<p>私の職場では、Windowsマシンを利用している方とMacを利用している方の両方が存在します。
+どちらか一方に寄せてくれれば大変ありがたいのですが、プロジェクトによってはWindows用のローカル開発環境しか用意されていないこともあるので、
+どちらか一方に寄せるというのも少々難しい問題となっています。
+大抵のケースではMacにParallelsを導入して回避しているのですが、できれば各OS上で動かせると開発はしやすいですよね。</p>
+
+<p>そこでDockerの出番ということになります。
+今回はWindowsとMacで共通の設定ファイルを利用した開発環境を構築する上で留意するべきポイントやテクニックを紹介します。</p>
+
+<h2>1. コンテナ化する部分とコンテナ化しない部分を決定する</h2>
+
+
+<p>Dockerを利用するのであればすべてコンテナ化したいところなのですが、
+IDEでデバッグする利便性を考慮すると、Tomcatサーバのようなアプリケーションサーバ部分はそのままにしておきたいです。
+そうなると、HTTPサーバ(Apache、Nginxなど)とデータベース(MySQL、PostgreSQLなど)のみコンテナ化する必要があります。</p>
+
+<h2>2. ディレクトリ構成は同じにしておく</h2>
+
+
+<p>WindowsとMacで共通の開発環境を構築するためには、ディレクトリ構成を同じにしておく必要があります。
+例えば私の場合は、以下のように各ユーザディレクトリ配下に共通のディレクトリ構成を作成しています。</p>
+
+<p>```
+(User Directory) &ndash; Development &ndash; Projects &ndash; (Project Name) &ndash; tomcat &ndash; log</p>
+
+<pre><code>                                                       - httpd - log
+                                                       - sources - (ソースファイルを格納するディレクトリ)
+</code></pre>
+
+<p>```</p>
+
+<p>とはいえ、ユーザディレクトリ名はユーザごとに異なるため、
+絶対パスを記述しなくてはいけない場合に <code>$HOME</code> の環境変数を直接取得することができないと少々困ります。
+そういう場合は、WindowsとMacでそれぞれ全ユーザの共有ディレクトリが存在するため、そこへシンボリックリンクを作成し、
+その共有ディレクトリ経由のパスを記述します。以下に例を記述します。</p>
+
+<p>```
+＜Windows＞
+Users &ndash; Public &ndash; Development &ndash; Projects &ndash; (Project Name : symbolic link)
+※上記のProject NameがUser DirectoryにあるProject Nameディレクトリのシンボリックリンクとなる</p>
+
+<p>＜Mac＞
+Users &ndash; Shared &ndash; Development &ndash; Projects &ndash; (Project Name : symbolic link)
+※上記のProject NameがUser DirectoryにあるProject Nameディレクトリのシンボリックリンクとなる
+```</p>
+
+<p>実はVista以降のWindowsとMacはドライブレターの有無の違いはあれど、
+上記のとおり殆ど同じディレクトリ構成を取ることが可能なのです。
+違いがあるのは、共有ディレクトリの名称くらいです。</p>
+
+<h2>3. Private Docker Repositoryを構築する</h2>
+
+
+<p>こちらは特に重要なポイントとなります。
+Private Docker Repositoryがないと長時間のビルドを利用者に強要してしまうことになるのと、msysGitの絶対パス問題(後述で紹介します)が災いして、共通のDockerfileを利用できないケースが出てきてしまうため、可能な限りPrivate Docker Repositoryを用意してください。
+Private Docker Repositoryの構築については<a target="_blank" href="http://dev.classmethod.jp/cloud/docker-registry-recipes/">クラスメソッドさんのブログ</a>で詳しく解説されています。</p>
+
+<p>1つ注意としては、Dockerはプライベートネットワーク上に存在する他のサーバに対して直接アクセスすることができません。
+(やろうと思えばできるかもしれませんが、docker-machine上のOSのIPアドレスを同一ネットワーク上に属させたり、ルーティングの設定をしたりという結構面倒な作業が必要になるかと思いますのでオススメはしません)<br>
+そのため、社内の開発機に構築したところで、その開発機がグローバルからアクセスできないようだと直接利用することができないため注意です。
+グローバルからアクセス可能な箇所にPrivate Docker Repositoryサーバを構築し、サーバ側にIP制限やBASIC認証を掛けて利用しましょう。</p>
+
+<h2>4. シェルスクリプトを利用してWindows用とMac用の処理を記述する</h2>
+
+
+<p>共通のディレクトリ構成を作成したところで、どうしても回避できない環境差異は存在してしまいます。
+そのため、シェルスクリプトを利用してWindows用とMac用の処理を関数内でラップしてしまいましょう。
+(ちなみに、Windowsでシェルスクリプトを実行する場合はGit for Windowsに付属してくるGit Bashを利用します。Docker Toolboxをインストールするときに合わせてインストールされます)<br>
+具体的にWindowsとMacで処理を分けなければならないのは以下の点です。</p>
+
+<h3>4-1. ユーザ共有ディレクトリの取得</h3>
+
+
+<p>こちらは前述のとおり、ユーザ共有ディレクトリの名称が異なるため、
+WindowsとMacで返却する名称を変更する必要があります。</p>
+
+<h3>4-2. シンボリックリンクの作成</h3>
+
+
+<p>Windowsで本物のシンボリックリンクを作成するためにはmklinkコマンドを利用する必要があります。
+Git Bashのlnではシンボリックリンクの作成は行わず、擬似的にコピーを作成するだけになるためです。
+また、シンボリックリンクと似たような機能にジャンクションポイントというものがありますが、
+こちらはDockerコンテナ内から参照できないため利用不可です。</p>
+
+<h3>4-3. 絶対パスの記述がWindowsの場合は異なる</h3>
+
+
+<p>通常だと「/Users」のように絶対パスは記述しますが、Git BashにおいてはmsysGitの仕様上、「//Users」と記述をしなくてはいけません。
+もし「/Users」とGit Bashで記述すると、Git for Windowsのインストールディレクトリからの相対パス(デフォルトだと/Program Files/Git/Users)になってしまいます。</p>
+
+<h3>4-4. ホストOS側のIPアドレスの取得</h3>
+
+
+<p>ここでいうホストOSというのは、WindowsローカルまたはMacローカルのマシンのIPアドレスのことです。(docker-machine ip で取得できるIPアドレスとは異なります)
+このIPアドレスは、Dockerコンテナ内からホストOS側で起動しているTomcat等と連携する場合に必要になります。
+WindowsとMacではネットワークコマンドが根本的に異なるため、こちらもシェルスクリプトで処理を分ける必要があります。</p>
+
+<h3>4-5. Docker環境変数の設定方法</h3>
+
+
+<p>WindowsのGit Bashで <code>eval $(docker-machine env マシン名)</code> を実行すると、<br>
+「On Windows, please specify either &lsquo;cmd&rsquo; or &lsquo;powershell&rsquo; with the &mdash;shell flag.」<bR>
+というように怒られてしまいます。こちらについても対処を行う必要があります。</p>
+
+<h3>4-6. Windowsでシェルスクリプトをプログラム内から呼び出す</h3>
+
+
+<p>Macでは特に問題ありませんが、WindowsだとGit Bashを経由しないとシェルスクリプトは実行できません。
+関連付けの設定を敢えて用意するのでもいいですが、いちいちそれを利用者に行わせるのは面倒なので、
+専用のバッチファイルを用意して対処します。</p>
+
+<br>
+
+
+<p>それでは、上記の問題に対処したラッパー関数を紹介します。<br></p>
+
+<br>
+
+
+<h3>OS判別用共通関数 (この関数は全スクリプトで参照されていることにする)</h3>
+
+
+<p>```bash</p>
+
+<h1>&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&ndash;</h1>
+
+<h1>OS種別名を取得する。</h1>
+
+<p>#</p>
+
+<h1>[Arguments]</h1>
+
+<h1>なし</h1>
+
+<p>#</p>
+
+<h1>[Return]</h1>
+
+<h1>OS名 (osx or win)</h1>
+
+<h1>&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&ndash;</h1>
+
+<p>function os_name {</p>
+
+<pre><code># WindowsのmsysGit経由で実行されているかどうかを調べる
+uname | grep -E '^MINGW' &gt; /dev/null 2&gt;&amp;1
+
+# WindowsのmsysGit経由の場合
+if [[ $? -eq 0 ]]; then
+
+    # Windowsとして出力する
+    echo 'win'
+
+# OSXの場合
+elif [[ $(uname) = 'Darwin' ]]; then
+
+    # OSXとして出力する
+    echo 'osx'
+
+else
+
+    # サポート外プラットフォームとして出力する
+    echo 'unknown'
+
+fi
+</code></pre>
+
+<p>}
+```</p>
+
+<h3>4-1. ユーザ共有ディレクトリの取得</h3>
+
+
+<p>```bash</p>
+
+<h1>&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&ndash;</h1>
+
+<h1>ユーザ共有ディレクトリを取得する。</h1>
+
+<p>#</p>
+
+<h1>[Arguments]</h1>
+
+<h1>なし</h1>
+
+<p>#</p>
+
+<h1>[Return]</h1>
+
+<h1>ユーザ共有ディレクトリパス</h1>
+
+<h1>&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&ndash;</h1>
+
+<p>function share_dir {</p>
+
+<pre><code># OS別処理
+case $(os_name) in
+
+# OSX
+osx)
+    echo "$(cd ${HOME}/../ &amp;&amp; pwd)/Shared"
+    ;;
+
+# Windows
+win)
+    echo "$(cd ${HOME}/../ &amp;&amp; pwd)/Public"
+    ;;
+
+# その他
+*)
+    echo "Unknown platform"
+    ;;
+
+esac
+</code></pre>
+
+<p>}
+```</p>
+
+<h3>4-2. シンボリックリンクの作成・削除</h3>
+
+
+<p>```bash</p>
+
+<h1>&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&ndash;</h1>
+
+<h1>シンボリックリンクを作成する。</h1>
+
+<p>#</p>
+
+<h1>[Arguments]</h1>
+
+<h1>1 : リンク名称</h1>
+
+<h1>2 : リンクターゲット</h1>
+
+<p>#</p>
+
+<h1>[Return]</h1>
+
+<h1>なし</h1>
+
+<h1>&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&ndash;</h1>
+
+<p>function mklink {</p>
+
+<pre><code># Windowsの場合
+if [[ $(os_name) = 'win' ]]; then
+
+    # ドライブレターをWindows形式に変換する
+    local work_link=$(echo "$1" | sed -E 's;^/([a-zA-Z]);\1:;g')
+    local work_target=$(echo "$2" | sed -E 's;^/([a-zA-Z]);\1:;g')
+
+    # ターゲットがディレクトリの場合
+    if [[ -d "$2" ]]; then
+
+        # ディレクトリのシンボリックリンクを作成する
+        cmd &lt;&lt;&lt; "mklink /D \"${work_link//\//\\}\" \"${work_target//\//\\}\"" &gt; /dev/null
+
+    else
+
+        # ファイルのシンボリックリンクを作成する
+        cmd &lt;&lt;&lt; "mklink \"${work_link//\//\\}\" \"${work_target//\//\\}\"" &gt; /dev/null
+
+    fi
+
+else
+
+    # lnコマンドでシンボリックリンクを作成する
+    ln -s "$2" "$1"
+
+fi
+</code></pre>
+
+<p>}</p>
+
+<h1>&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&ndash;</h1>
+
+<h1>シンボリックリンクを削除する。</h1>
+
+<p>#</p>
+
+<h1>[Arguments]</h1>
+
+<h1>1 : リンクパス</h1>
+
+<p>#</p>
+
+<h1>[Return]</h1>
+
+<h1>なし</h1>
+
+<h1>&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&ndash;</h1>
+
+<p>function rmlink {</p>
+
+<pre><code># こちらは敢えて関数化する必要はないが、mklinkとの対比のために用意しておく
+rm -f "$1"
+</code></pre>
+
+<p>}
+```</p>
+
+<p>紹介している関数mklinkではlnコマンドと引数が逆なので、<br>
+分かりづらい場合は上記関数を修正してみてください。</p>
+
+<p>また、1点Windowsの問題として、mklinkコマンドは「管理者として実行」を行わないと実行できません。
+Git Bashで管理者として実行を行うためにはどうすればいいのでしょうか。
+簡単な方法としては、以下のような「管理者として実行」を行うためのスクリプト(sudo.sh)を用意します。</p>
+
+<p><strong>シェルスクリプトを管理者として実行するためのスクリプト (sudo.sh)</strong><br>
+```bash</p>
+
+<h1>Windowsの場合</h1>
+
+<p>if [[ $(os_name) = &lsquo;win&rsquo; ]]; then</p>
+
+<pre><code># 管理者権限で実行する
+powershell -command "Start-Process -wait \"C:\Program Files\Git\bin\bash.exe\" -argumentlist \"--login -i $1\" -Verb runas"
+</code></pre>
+
+<p>else</p>
+
+<pre><code># そのまま実行する
+. $1
+</code></pre>
+
+<p>fi
+```</p>
+
+<p>上記スクリプトを利用して、以下のように実行します。</p>
+
+<p><code>bash
+./sudo.sh (管理者として実行したいシェルスクリプトファイル)
+</code></p>
+
+<p>こうすることで、mklinkコマンドをシェルスクリプト内で実行することが可能になります。
+(実行時に管理者として実行するかどうかの確認ダイアログが表示されます)</p>
+
+<h3>4-3. 絶対パスの記述を変換する関数</h3>
+
+
+<p>以下のような関数を使って、引数に含まれる絶対パスを修正します。</p>
+
+<p>```bash</p>
+
+<h1>&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&ndash;</h1>
+
+<h1>Dockerで利用するファイルパスを取得する。</h1>
+
+<p>#</p>
+
+<h1>Windows版Dockerで、かつmsysGit経由で実行している場合のみ有効となる。</h1>
+
+<h1>msysGit経由の場合、単一の開始スラッシュはmsysGitインストールディレクトリからの相対パスとなるため、</h1>
+
+<h1>開始スラッシュを 2 つにする必要がある。</h1>
+
+<p>#</p>
+
+<h1>[Arguments]</h1>
+
+<h1>1 : 変換するファイルパス (絶対パス)</h1>
+
+<p>#</p>
+
+<h1>[Return]</h1>
+
+<h1>Dockerで利用するファイルパス</h1>
+
+<h1>&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&ndash;</h1>
+
+<p>function docker_path {</p>
+
+<pre><code># Windowsの場合
+if [[ $(os_name) = 'win' ]]; then
+
+    # 単一スラッシュで開始するパラメータをスラッシュ2つに変更する
+    echo "$@" | sed -E 's;^/([a-zA-Z_\-\.]);//\1;g' | sed -E 's; /([a-zA-Z_\-\.]); //\1;g'
+
+else
+
+    # そのまま出力する
+    echo "$@"
+
+fi
+</code></pre>
+
+<p>}
+```</p>
+
+<p>絶対ファイルパスを利用する箇所で以下のように利用します。</p>
+
+<p><code>bash
+docker run -it -v $(docker_path /c/Users/kkoudev/Temp):/Temp debian:wheezy bash
+</code></p>
+
+<p>-vのように、途中にスペースが入らない場合は先頭のパスだけが対象になります。</p>
+
+<p>また、docker execなどで外部から引数を渡してコマンドを実行したい場合、
+どの部分が絶対パスかコマンドによるので判らないかと思いますが、以下のように指定することで絶対パスを勝手に変換してくれます。</p>
+
+<p><code>bash
+docker exec -it imlib2-image $(docker_path "$@")
+</code></p>
+
+<h3>4-4. ホストOS側のIPアドレスの取得</h3>
+
+
+<p>ホストOS側のIPが複数ある場合は、最初にヒットするIPアドレスを返却するようになっています。</p>
+
+<p>```bash</p>
+
+<h1>&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&ndash;</h1>
+
+<h1>HostのIPを取得する</h1>
+
+<p>#</p>
+
+<h1>[Arguments]</h1>
+
+<h1>なし</h1>
+
+<p>#</p>
+
+<h1>[Return]</h1>
+
+<h1>HostのIP</h1>
+
+<h1>&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&mdash;&ndash;</h1>
+
+<p>function host_ip {</p>
+
+<pre><code># OS別処理
+case $(os_name) in
+
+# OSX
+osx)
+    ipconfig getifaddr $(netstat -rn -f inet | awk '/^default/{print $6; exit}')
+    ;;
+
+# Windows
+win)
+    ipconfig | grep -a IPv4 | head -n 1 | awk -F ': ' '{print $2}'
+    ;;
+
+# その他
+*)
+    echo "Unknown platform"
+    ;;
+
+esac
+</code></pre>
+
+<p>}
+```</p>
+
+<h3>4-5. Docker環境変数の設定方法</h3>
+
+
+<p>実はこちらは &mdash;shell オプションを明示すれば特別処理を分ける必要はありません。<br>
+以下のように指定します。</p>
+
+<p><code>bash
+eval $(docker-machine env --shell=sh (マシン名))
+</code></p>
+
+<h3>4-6. Windowsでシェルスクリプトをプログラム内から呼び出す</h3>
+
+
+<p>以下のようなバッチファイル(bash.bat)を用意します。</p>
+
+<p>```
+@echo off</p>
+
+<p>&ldquo;C:\Program Files\Git\bin\bash.exe&rdquo; &mdash;login %*
+```</p>
+
+<p>シェルスクリプトをプログラム内から実行する場合は、以下のコマンドを実行します。</p>
+
+<p><code>
+bash.bat (実行するシェルスクリプトのファイルパス)
+</code></p>
+
+<p>以上、紹介した関数があれば大抵のプラットフォーム差異は吸収することが可能です。</p>
+
+<h2>5. 設定ファイルはホスト側にあるソースファイルリポジトリから参照する</h2>
+
+
+<p>各コンテナ起動時に、ホスト側のボリュームをマウントし、ソースファイルリポジトリで管理されている
+Apacheの設定ファイル等を参照できるようにしておきます。
+このとき、Apacheの設定ファイル内でログ出力先をマウントしたホスト側ボリュームとしておけば、
+わざわざコンテナ内に入らなくてもログを閲覧できます。<br>
+以下はコンテナ起動時のコマンドとApacheの設定ファイルにおける記述例です。<br>
+(ここまでに紹介した関数を利用しています)</p>
+
+<p>＜起動コマンド＞
+<code>bash
+docker run -p 80:80 -p 443:443 -d \
+--add-host=docker.host:$(host_ip) \
+-v $(docker_path $(share_dir)/Development/Projects/(Project Name)):/(Project Name) httpd-2.2 \
+$(docker_path /opt/httpd-worker/bin/httpd) -f $(docker_path /(Project Name)/sources/server/conf/apache.local/httpd.conf) -DFOREGROUND
+</code></p>
+
+<p>＜Apacheの設定ファイル＞
+<code>
+ServerRoot /(Project Name)/sources/server
+PidFile /var/run/httpd.pid
+ErrorLog /(Project Name)/httpd/log/error_log
+</code></p>
+
+<p><strong>※(Project Name)には任意の名称を入れてください</strong></p>
+
+<p>こちらは最初に紹介したディレクトリ構成が元となっています。
+/(Project Name) でコンテナ内からプロジェクト配下のディレクトリを全てアクセスできるようにしておくことで
+ホスト側からソースファイルリポジトリで管理されている設定ファイルを読み込んでサーバを起動することができます。</p>
+
+<p>また、&mdash;add-hostを利用することで、IPアドレスではなくホスト名で設定ファイル内からアクセスを行うことが可能になります。
+Dockerコンテナ内のApacheからホスト側で起動しているTomcatへ連携する場合は、
+ここで定義した名前をApache設定ファイル内に記述して連携します。</p>
+
+<h2>まとめ</h2>
+
+
+<p>上記で紹介したテクニックとポイントを抑えておけば<br>
+共通の設定ファイルを利用してWindowsとMacの開発環境を構築することが可能になります。<br>
+WindowsとMacが混在しているような現場では大いに役立つと思いますので、是非活用してみてください。</p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[SSHを使ってWindowsからDockerコンテナ内のコマンドを直接実行する]]></title>
