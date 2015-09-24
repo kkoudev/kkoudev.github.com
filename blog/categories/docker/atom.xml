@@ -4,7 +4,7 @@
   <title><![CDATA[Category: Docker | 猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/blog/categories/docker/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2015-09-24T02:52:39+09:00</updated>
+  <updated>2015-09-24T18:06:25+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -344,7 +344,7 @@ Git Bashで管理者として実行を行うためにはどうすればいいの
 <p>if [[ $(os_name) = &lsquo;win&rsquo; ]]; then</p>
 
 <pre><code># 管理者権限で実行する
-powershell -command "Start-Process -wait \"C:\Program Files\Git\bin\bash.exe\" -argumentlist \"--login -i $1\" -Verb runas"
+powershell -Command "Start-Process \"C:\Program Files\Git\bin\bash.exe\" -argumentlist \"--login -i $1\" -Verb runas | Out-Null"
 </code></pre>
 
 <p>else</p>

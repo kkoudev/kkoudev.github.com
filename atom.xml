@@ -4,7 +4,7 @@
   <title><![CDATA[猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2015-09-24T02:52:39+09:00</updated>
+  <updated>2015-09-24T18:06:25+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -443,7 +443,7 @@ Git Bashで管理者として実行を行うためにはどうすればいいの
 </span><span class='line'><span class="k">if</span> <span class="o">[[</span> <span class="k">$(</span>os_name<span class="k">)</span> <span class="o">=</span> <span class="s1">&#39;win&#39;</span> <span class="o">]]</span>; <span class="k">then</span>
 </span><span class='line'>
 </span><span class='line'>    <span class="c"># 管理者権限で実行する</span>
-</span><span class='line'>    powershell -command <span class="s2">&quot;Start-Process -wait \&quot;C:\Program Files\Git\bin\bash.exe\&quot; -argumentlist \&quot;--login -i $1\&quot; -Verb runas&quot;</span>
+</span><span class='line'>    powershell -Command <span class="s2">&quot;Start-Process \&quot;C:\Program Files\Git\bin\bash.exe\&quot; -argumentlist \&quot;--login -i $1\&quot; -Verb runas | Out-Null&quot;</span>
 </span><span class='line'>
 </span><span class='line'><span class="k">else</span>
 </span><span class='line'>
