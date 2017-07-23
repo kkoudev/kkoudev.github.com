@@ -9,9 +9,11 @@
   <meta name="author" content="kkoudev">
 
   
-  <meta name="description" content="Dockerはバージョン1.8よりDocker Toolboxと呼ばれるものが公式に配布されるようになり、
-WindowsおよびMacの双方でDockerクライアントは然ることながら、docker-machineが利用できるようになりました。
-従来の boot2docker が docker- &hellip;">
+  <meta name="description" content="久々の更新が移転のお知らせで恐縮です。
+octopressでブログを更新していたのですが、
+少し放置していたら最新版の取り込みがかなり苦痛なことになり、
+メンテ出来なくなってブログの更新をずっと放置してしまっておりました。
+潔く最新版にするのは諦め Medium &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -66,6 +68,50 @@ WindowsおよびMacの双方でDockerクライアントは然ることながら�
     <div id="content">
       <div class="blog-index">
   
+  
+  
+    <article>
+      
+  <header>
+    
+      <h1 class="entry-title"><a href="/blog/2017/07/24/blog-moved/">ブログ移転のお知らせ</a></h1>
+    
+    
+      <p class="meta">
+        
+
+
+
+
+
+
+
+
+  
+
+
+<time datetime="2017-07-24T02:19:51+09:00" pubdate data-updated="true">Jul 24<span>th</span>, 2017</time>
+        
+         | <a href="/blog/2017/07/24/blog-moved/#disqus_thread">Comments</a>
+        
+      </p>
+    
+  </header>
+
+
+  <div class="entry-content"><p>久々の更新が移転のお知らせで恐縮です。
+octopressでブログを更新していたのですが、<br>
+少し放置していたら最新版の取り込みがかなり苦痛なことになり、<br>
+メンテ出来なくなってブログの更新をずっと放置してしまっておりました。<br>
+潔く最新版にするのは諦め Medium の方でブログを書くようにしましたので、<br>
+引き続きよろしくお願いします。<br>
+<a href="https://medium.com/@kkoudev/"><a href="https://medium.com/@kkoudev/">https://medium.com/@kkoudev/</a></a></p>
+</div>
+  
+  
+
+
+    </article>
   
   
     <article>
@@ -4082,289 +4128,9 @@ Mavenからの移行の観点を交えて説明していきたいと思います
 
     </article>
   
-  
-    <article>
-      
-  <header>
-    
-      <h1 class="entry-title"><a href="/blog/2013/09/14/sql/">EXISTSとSQLの高速化について</a></h1>
-    
-    
-      <p class="meta">
-        
-
-
-
-
-
-
-
-
-  
-
-
-<time datetime="2013-09-14T23:54:00+09:00" pubdate data-updated="true">Sep 14<span>th</span>, 2013</time>
-        
-         | <a href="/blog/2013/09/14/sql/#disqus_thread">Comments</a>
-        
-      </p>
-    
-  </header>
-
-
-  <div class="entry-content"><p>SQL高速化についてはいろんなサイトで取り上げられているので
-今更取り上げる必要はないかと思っていましたが、
-ふと最近仕事をしている中でハマっている人が多いポイントであると感じたため
-改めて書いてみることにしました。</p>
-
-<h2>EXISTSが速いという誤解</h2>
-
-
-<p>EXISTSについて書かれたサイトを見ると、
-「速い」というような記述を見かけることが多いかと思います。
-しかし、これはあくまでサブクエリを組んだ場合に、INやイコールを使って比較するときと比べて速い場合が多いというだけであり、
-EXISTSが速いというわけでは決してありません。
-ハッキリ言ってしまうと、EXISTSを使うクエリは基本的に遅いです。</p>
-
-<p>これは正確に言うと、EXISTSを利用するケースにおいて<b>相関サブクエリ</b>が使われていることが原因で遅くなっています。
-相関サブクエリとはどういうものか、以下にメンバー情報を格納した MEMBER テーブルと、
-各メンバーごとのアクセスログを記録した ACCESS_LOG テーブルを例に説明してみます。</p>
-
-<p>＜MEMBERテーブル＞</p>
-
-<table>
-<thead>
-<tr>
-<th align="left">カラム名</th>
-<th align="left">内容</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td align="left">MEMBER_ID</td>
-<td align="left">メンバーID。プライマリキー</td>
-</tr>
-<tr>
-<td align="left">NAME</td>
-<td align="left">メンバー名</td>
-</tr>
-</tbody>
-</table>
-
-
-<br>
-
-
-<p>＜ACCESS_LOGテーブル＞</p>
-
-<table>
-<thead>
-<tr>
-<th align="left">カラム名</th>
-<th align="left">内容</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td align="left">MEMBER_ID</td>
-<td align="left">メンバーID。プライマリキー1</td>
-</tr>
-<tr>
-<td align="left">DATE</td>
-<td align="left">記録日時。プライマリキー2</td>
-</tr>
-<tr>
-<td align="left">IP</td>
-<td align="left">IPアドレス</td>
-</tr>
-</tbody>
-</table>
-
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-</pre></td><td class='code'><pre><code class='sql'><span class='line'><span class="k">SELECT</span>
-</span><span class='line'>    <span class="n">MEMBER</span><span class="p">.</span><span class="n">MEMBER_ID</span><span class="p">,</span>
-</span><span class='line'>    <span class="n">MEMBER</span><span class="p">.</span><span class="n">NAME</span>
-</span><span class='line'><span class="k">FROM</span>
-</span><span class='line'>    <span class="n">MEMBER</span>
-</span><span class='line'><span class="k">WHERE</span>
-</span><span class='line'>    <span class="k">EXISTS</span> <span class="p">(</span>
-</span><span class='line'>    <span class="k">SELECT</span>
-</span><span class='line'>        <span class="o">*</span>
-</span><span class='line'>    <span class="k">FROM</span>
-</span><span class='line'>        <span class="n">ACCESS_LOG</span>
-</span><span class='line'>    <span class="k">WHERE</span>
-</span><span class='line'>        <span class="n">ACCESS_LOG</span><span class="p">.</span><span class="n">MEMBER_ID</span> <span class="o">=</span> <span class="n">MEMBER</span><span class="p">.</span><span class="n">MEMBER_ID</span>  <span class="cm">/* サブクエリでメインクエリのIDを参照している */</span>
-</span><span class='line'>    <span class="k">AND</span>
-</span><span class='line'>        <span class="n">ACCESS_LOG</span><span class="p">.</span><span class="nb">DATE</span> <span class="o">&gt;=</span> <span class="s1">&#39;2013-08-01&#39;</span>
-</span><span class='line'>    <span class="k">AND</span>
-</span><span class='line'>        <span class="n">ACCESS_LOG</span><span class="p">.</span><span class="nb">DATE</span> <span class="o">&lt;</span> <span class="s1">&#39;2013-09-01&#39;</span>
-</span><span class='line'>    <span class="p">)</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>上記のように、メインとなるクエリのIDをサブクエリで参照しているクエリを相関サブクエリと言います。
-この相関サブクエリが遅い理由は、
-上記でいう「<b>MEMBERテーブルのレコード数×ACCESS_LOGテーブルのレコード数</b>」の数だけ比較処理が実行されてしまうからです。
-(EXISTS句を利用しているので、正確には一致するレコードが見つかればそこで比較処理は終了しますが、
-見つからなかった場合は「MEMBERテーブルのレコード数×ACCESS_LOGテーブルのレコード数」の比較処理が実行されてしまいます)</p>
-
-<p>これは各テーブルのレコード数が増えれば増えるほど、処理が一気に重くなることを示しています。
-特にこの例でいうアクセスログというものは、分単位でレコードが増えるようなデータとなりますので、
-システム規模が大きいとレコード数は1000万以上になることが予想されます。</p>
-
-<p>この場合、MEMBERテーブルのレコード数が 3000 件ほどであったとしても、
-アクセスログが1000万件あるとしたら、「3000×1000万＝300億」となり、膨大な数の比較を行うことになります。
-300億という比較回数が重たいということは誰の目から見ても明らかでしょう。</p>
-
-<p>EXISTS(というより相関サブクエリ)は見た目としてはわかりやすい記述ではありますが、
-このようにレコードの組み合わせの数だけ比較処理が実行されてしまうため、
-非常に効率が悪い処理ということになります。</p>
-
-<h2>EXISTSをINNER JOINに置き換える</h2>
-
-
-<p>これを解決するための手段が、INNER JOINへの置き換えになります。
-すべてのEXISTSはINNER JOINへ置き換え可能です。(余程特殊な記述でなければ)
-なぜINNER JOINへ置き換えると速くなるのかは、以下のSQL例を元に説明します。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-</pre></td><td class='code'><pre><code class='sql'><span class='line'><span class="k">SELECT</span>
-</span><span class='line'>    <span class="n">MEMBER</span><span class="p">.</span><span class="n">MEMBER_ID</span><span class="p">,</span>
-</span><span class='line'>    <span class="n">MEMBER</span><span class="p">.</span><span class="n">NAME</span>
-</span><span class='line'><span class="k">FROM</span>
-</span><span class='line'>    <span class="n">MEMBER</span>
-</span><span class='line'><span class="k">INNER</span> <span class="k">JOIN</span> <span class="p">(</span>
-</span><span class='line'>    <span class="k">SELECT</span>
-</span><span class='line'>        <span class="k">DISTINCT</span> <span class="n">ACCESS_LOG</span><span class="p">.</span><span class="n">MEMBER_ID</span>
-</span><span class='line'>    <span class="k">FROM</span>
-</span><span class='line'>        <span class="n">ACCESS_LOG</span>
-</span><span class='line'>    <span class="k">WHERE</span>
-</span><span class='line'>        <span class="n">ACCESS_LOG</span><span class="p">.</span><span class="nb">DATE</span> <span class="o">&gt;=</span> <span class="s1">&#39;2013-08-01&#39;</span>
-</span><span class='line'>    <span class="k">AND</span>
-</span><span class='line'>        <span class="n">ACCESS_LOG</span><span class="p">.</span><span class="nb">DATE</span> <span class="o">&lt;</span> <span class="s1">&#39;2013-09-01&#39;</span>
-</span><span class='line'><span class="p">)</span> <span class="n">LOG_TEMP</span>
-</span><span class='line'><span class="k">ON</span>
-</span><span class='line'>    <span class="n">LOG_TEMP</span><span class="p">.</span><span class="n">MEMBER_ID</span> <span class="o">=</span> <span class="n">MEMBER</span><span class="p">.</span><span class="n">MEMBER_ID</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>このクエリが先述の相関サブクエリを利用したクエリと何が違うのかと言いますと、
-まず INNER JOIN の中にクエリが組まれています。
-これはWHERE句に記述されたサブクエリとは違い、<b>メインクエリよりも先に実行されます</b>。
-テンポラリテーブルと同じと言えばわかる人にはわかるかと思います。</p>
-
-<p>なので、まずINNER JOINの中で、日付範囲を絞って該当するアクセスログのメンバーIDを重複を除去して取得します。
-この時点で、結構な数の絞り込みが完了しています。(この1000万件が2011年からのアクセスログだとしたら、数十万件程度には絞れていることになります)
-その絞り込みが完了した結果と INNER JOIN すると、相関サブクエリを利用する場合と比べて劇的に比較回数が抑えられます。</p>
-
-<p>処理時間はサーバの処理速度にもよるのであくまで目安ですが、
-先述の相関サブクエリを利用したクエリで30分〜１時間応答が返ってこなかったクエリも、
-後述のINNER JOINへ置き換えた形に直すことで、１分以内に結果を取得することが出来ます。
-INNER JOINの形はデータ量が増えても比較回数が増えにくいため、非常に強力です。</p>
-
-<h2>NOT EXISTSの置き換え</h2>
-
-
-<p>EXISTSについてはINNER JOINへの置き換えが可能であることがわかりましたが、
-NOT EXISTSについてはどうなるでしょうか。
-「存在しない」ことを調べるわけですから、互いに存在する条件で取り出すINNER JOINでは表現することが出来ません。
-NOT EXISTSと同等の結果を JOIN で表現するには、
-LEFT JOINで結合し、WHERE句でIDが null かどうかを判定することで NOT EXISTS と同等の判定を行うことが出来ます。</p>
-
-<figure class='code'><figcaption><span></span></figcaption><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-<span class='line-number'>2</span>
-<span class='line-number'>3</span>
-<span class='line-number'>4</span>
-<span class='line-number'>5</span>
-<span class='line-number'>6</span>
-<span class='line-number'>7</span>
-<span class='line-number'>8</span>
-<span class='line-number'>9</span>
-<span class='line-number'>10</span>
-<span class='line-number'>11</span>
-<span class='line-number'>12</span>
-<span class='line-number'>13</span>
-<span class='line-number'>14</span>
-<span class='line-number'>15</span>
-<span class='line-number'>16</span>
-<span class='line-number'>17</span>
-<span class='line-number'>18</span>
-<span class='line-number'>19</span>
-</pre></td><td class='code'><pre><code class='sql'><span class='line'><span class="k">SELECT</span>
-</span><span class='line'>    <span class="n">MEMBER</span><span class="p">.</span><span class="n">MEMBER_ID</span><span class="p">,</span>
-</span><span class='line'>    <span class="n">MEMBER</span><span class="p">.</span><span class="n">NAME</span>
-</span><span class='line'><span class="k">FROM</span>
-</span><span class='line'>    <span class="n">MEMBER</span>
-</span><span class='line'><span class="k">LEFT</span> <span class="k">JOIN</span> <span class="p">(</span>
-</span><span class='line'>    <span class="k">SELECT</span>
-</span><span class='line'>        <span class="k">DISTINCT</span> <span class="n">ACCESS_LOG</span><span class="p">.</span><span class="n">MEMBER_ID</span>
-</span><span class='line'>    <span class="k">FROM</span>
-</span><span class='line'>        <span class="n">ACCESS_LOG</span>
-</span><span class='line'>    <span class="k">WHERE</span>
-</span><span class='line'>        <span class="n">ACCESS_LOG</span><span class="p">.</span><span class="nb">DATE</span> <span class="o">&gt;=</span> <span class="s1">&#39;2013-08-01&#39;</span>
-</span><span class='line'>    <span class="k">AND</span>
-</span><span class='line'>        <span class="n">ACCESS_LOG</span><span class="p">.</span><span class="nb">DATE</span> <span class="o">&lt;</span> <span class="s1">&#39;2013-09-01&#39;</span>
-</span><span class='line'><span class="p">)</span> <span class="n">LOG_TEMP</span>
-</span><span class='line'><span class="k">ON</span>
-</span><span class='line'>    <span class="n">LOG_TEMP</span><span class="p">.</span><span class="n">MEMBER_ID</span> <span class="o">=</span> <span class="n">MEMBER</span><span class="p">.</span><span class="n">MEMBER_ID</span>
-</span><span class='line'><span class="k">WHERE</span>
-</span><span class='line'>    <span class="n">LOG_TEMP</span><span class="p">.</span><span class="n">MEMBER_ID</span> <span class="k">is</span> <span class="k">null</span> <span class="cm">/* ACCESS_LOGに含まれないメンバーIDを調べる */</span>
-</span></code></pre></td></tr></table></div></figure>
-
-
-<p>この場合も、NOT EXISTSを利用する場合と比べて、
-先にLEFT JOIN内のサブクエリが実行されるため(先に絞り込みを行って件数を減らした上で LEFT JOIN をしているので)高速になります。
-条件がない絞り込みの場合でも、MySQLの場合であればJOINの方が最適化されやすい傾向にあるので、
-その場合であってもNOT EXISTSよりも速いことが多いです。</p>
-
-<h2>まとめ</h2>
-
-
-<p>このように、普段EXISTSを始めとした相関サブクエリをさりげなく使っている場面は多いかと思いますが、
-システムのデータ量が増えれば増えるほど速度低下を招くクエリであるためオススメできません。
-記述的には少し記述量が増える場合もありますが、それに見合った速度を得ることが出来ますので、EXISTSは積極的にJOINへ置き換えることをお勧め致します。</p>
-</div>
-  
-  
-
-
-    </article>
-  
   <div class="pagination">
+    
+      <a class="prev" href="/blog/page/2/">&larr; Older</a>
     
     <a href="/blog/archives">Blog Archives</a>
     
@@ -4375,6 +4141,10 @@ LEFT JOINで結合し、WHERE句でIDが null かどうかを判定すること�
     <section>
   <h1>Recent Posts</h1>
   <ul id="recent_posts">
+    
+      <li class="post">
+        <a href="/blog/2017/07/24/blog-moved/">ブログ移転のお知らせ</a>
+      </li>
     
       <li class="post">
         <a href="/blog/2015/09/23/docker-development-windows-osx/">Dockerを使ってWindowsとMacで共通設定ファイルを利用した開発環境を構築する</a>
@@ -4390,10 +4160,6 @@ LEFT JOINで結合し、WHERE句でIDが null かどうかを判定すること�
     
       <li class="post">
         <a href="/blog/2014/07/13/gradle-v2/">Gradle 1.xから2.0へ移行する際に気をつけるべき変更点</a>
-      </li>
-    
-      <li class="post">
-        <a href="/blog/2014/06/15/imlib2/">Imlib2とImage::Imlib2のJPEGヒント対応版を作成しました</a>
       </li>
     
   </ul>
@@ -4438,7 +4204,7 @@ LEFT JOINで結合し、WHERE句でIDが null かどうかを判定すること�
     </div>
   </div>
   <footer role="contentinfo"><p>
-  Copyright &copy; 2015 - kkoudev -
+  Copyright &copy; 2017 - kkoudev -
   <span class="credit">Powered by <a href="http://octopress.org">Octopress</a></span>
   - <span class="credit">Theme by <a href="http://www.gehaxelt.in">Gehaxelt</a></span>
   <span class="credit">and <a href="http://www.it-solutions-neef.de">IT Solutions Neef</a></span>

@@ -4,7 +4,7 @@
   <title><![CDATA[猫好きモバイルアプリケーション開発者記録]]></title>
   <link href="http://kkoudev.github.io/atom.xml" rel="self"/>
   <link href="http://kkoudev.github.io/"/>
-  <updated>2015-09-24T18:06:25+09:00</updated>
+  <updated>2017-07-24T02:26:29+09:00</updated>
   <id>http://kkoudev.github.io/</id>
   <author>
     <name><![CDATA[kkoudev]]></name>
@@ -12,6 +12,21 @@
   </author>
   <generator uri="http://octopress.org/">Octopress</generator>
 
+  
+  <entry>
+    <title type="html"><![CDATA[ブログ移転のお知らせ]]></title>
+    <link href="http://kkoudev.github.io/blog/2017/07/24/blog-moved/"/>
+    <updated>2017-07-24T02:19:51+09:00</updated>
+    <id>http://kkoudev.github.io/blog/2017/07/24/blog-moved</id>
+    <content type="html"><![CDATA[<p>久々の更新が移転のお知らせで恐縮です。
+octopressでブログを更新していたのですが、<br>
+少し放置していたら最新版の取り込みがかなり苦痛なことになり、<br>
+メンテ出来なくなってブログの更新をずっと放置してしまっておりました。<br>
+潔く最新版にするのは諦め Medium の方でブログを書くようにしましたので、<br>
+引き続きよろしくお願いします。<br>
+<a href="https://medium.com/@kkoudev/"><a href="https://medium.com/@kkoudev/">https://medium.com/@kkoudev/</a></a></p>
+]]></content>
+  </entry>
   
   <entry>
     <title type="html"><![CDATA[Dockerを使ってWindowsとMacで共通設定ファイルを利用した開発環境を構築する]]></title>

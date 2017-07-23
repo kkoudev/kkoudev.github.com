@@ -5,12 +5,15 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>Intellij IDEA 13.1.4においてGradleのWebリソースディレクトリがクリアされてしまう不具合 - 猫好きモバイルアプリケーション開発者記録</title>
+  <title>ブログ移転のお知らせ - 猫好きモバイルアプリケーション開発者記録</title>
   <meta name="author" content="kkoudev">
 
   
-  <meta name="description" content="Intellij IDEA 13.1.4においてGradleプラグインのデグレが発生しました。
-内容としては、マルチプロジェクトを利用している場合にWARプロジェクトのWebリソースディレクトリ(ex. src/main/webapp) が &hellip;">
+  <meta name="description" content="久々の更新が移転のお知らせで恐縮です。
+octopressでブログを更新していたのですが、
+少し放置していたら最新版の取り込みがかなり苦痛なことになり、
+メンテ出来なくなってブログの更新をずっと放置してしまっておりました。
+潔く最新版にするのは諦め Medium &hellip;">
   
 
   <!-- http://t.co/dKP3o1e -->
@@ -19,7 +22,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://kkoudev.github.io/blog/2014/08/04/gradle-idea-bug/">
+  <link rel="canonical" href="http://kkoudev.github.io/blog/2017/07/24/blog-moved/">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/stylesheets/data-table.css" rel="stylesheet" type="text/css" />
@@ -68,7 +71,7 @@
   
   <header>
     
-      <h1 class="entry-title">Intellij IDEA 13.1.4においてGradleのWebリソースディレクトリがクリアされてしまう不具合</h1>
+      <h1 class="entry-title">ブログ移転のお知らせ</h1>
     
     
       <p class="meta">
@@ -84,7 +87,7 @@
   
 
 
-<time datetime="2014-08-04T23:24:24+09:00" pubdate data-updated="true">Aug 4<span>th</span>, 2014</time>
+<time datetime="2017-07-24T02:19:51+09:00" pubdate data-updated="true">Jul 24<span>th</span>, 2017</time>
         
          | <a href="#disqus_thread">Comments</a>
         
@@ -93,30 +96,13 @@
   </header>
 
 
-<div class="entry-content"><p>Intellij IDEA 13.1.4においてGradleプラグインのデグレが発生しました。<br>
-内容としては、マルチプロジェクトを利用している場合にWARプロジェクトのWebリソースディレクトリ(ex. src/main/webapp) が
-1つのプロジェクトを除いて全てクリアされてしまうというものです。
-13.1がリリースされたばかりのときに同じようにArtifactsが 1 つのプロジェクト分しか作成されないという不具合がありましたが、
-今回はこれのWebリソースディレクトリ版の不具合といったところです。</p>
-
-<p>手動で設定すれば動くようになるけど、再度Gradleプロジェクトのリフレッシュをするとまたしてもクリアされてしまうという酷いもの。
-さすがにこれでは使い物にならないので、バグ報告をしたところ数週間経ってようやく修正されました。
-13.1.5にて修正版が反映されるようですが、13.1.4の状態でも以下のファイルを反映することでこの不具合が解消されます。</p>
-
-<p>＜修正パッチ＞<br>
-<a href="http://youtrack.jetbrains.com/_persistent/ij13-gradle-fix.zip?file=74-179766&v=0&c=true">ここからダウンロード</a></p>
-
-<p>このファイルをダウンロードし、</p>
-
-<figure class='code'><div class="highlight"><table><tr><td class="gutter"><pre class="line-numbers"><span class='line-number'>1</span>
-</pre></td><td class='code'><pre><code class=''><span class='line'>(Intellij IDEA 13のインストール先)/plugins/gradle/lib</span></code></pre></td></tr></table></div></figure>
-
-
-<p>上記ディレクトリへコピーすることで解消されます。<br></p>
-
-<p>これで問題なく動作することを確認できましたが、
-どうもIntellij IDEAのGradle機能はデグレが多いのと、マルチプロジェクトについては毎回動作確認をしていないと思わせるような印象があります…。
-今後はこのようなクリティカルな不具合がないことを期待したいところです。</p>
+<div class="entry-content"><p>久々の更新が移転のお知らせで恐縮です。
+octopressでブログを更新していたのですが、<br>
+少し放置していたら最新版の取り込みがかなり苦痛なことになり、<br>
+メンテ出来なくなってブログの更新をずっと放置してしまっておりました。<br>
+潔く最新版にするのは諦め Medium の方でブログを書くようにしましたので、<br>
+引き続きよろしくお願いします。<br>
+<a href="https://medium.com/@kkoudev/"><a href="https://medium.com/@kkoudev/">https://medium.com/@kkoudev/</a></a></p>
 </div>
 
 
@@ -139,21 +125,15 @@
   
 
 
-<time datetime="2014-08-04T23:24:24+09:00" pubdate data-updated="true">Aug 4<span>th</span>, 2014</time>
+<time datetime="2017-07-24T02:19:51+09:00" pubdate data-updated="true">Jul 24<span>th</span>, 2017</time>
       
-
-<span class="categories">
-  
-    <a class='category' href='/blog/categories/gradle/'>Gradle</a>
-  
-</span>
 
 
     </p>
     
       <div class="sharing">
   
-  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://kkoudev.github.io/blog/2014/08/04/gradle-idea-bug/" data-via="kkoudev" data-counturl="http://kkoudev.github.io/blog/2014/08/04/gradle-idea-bug/" >Tweet</a>
+  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://kkoudev.github.io/blog/2017/07/24/blog-moved/" data-via="kkoudev" data-counturl="http://kkoudev.github.io/blog/2017/07/24/blog-moved/" >Tweet</a>
   
   
   <div class="g-plusone" data-size="medium"></div>
@@ -167,10 +147,8 @@
     
     <p class="meta">
       
-        <a class="basic-alignment left" href="/blog/2014/07/13/gradle-v2/" title="Previous Post: Gradle 1.xから2.0へ移行する際に気をつけるべき変更点">&laquo; Gradle 1.xから2.0へ移行する際に気をつけるべき変更点</a>
+        <a class="basic-alignment left" href="/blog/2015/09/23/docker-development-windows-osx/" title="Previous Post: Dockerを使ってWindowsとMacで共通設定ファイルを利用した開発環境を構築する">&laquo; Dockerを使ってWindowsとMacで共通設定ファイルを利用した開発環境を構築する</a>
       
-      
-        <a class="basic-alignment right" href="/blog/2014/11/16/docker-windows/" title="Next Post: SSHを使ってWindowsからDockerコンテナ内のコマンドを直接実行する">SSHを使ってWindowsからDockerコンテナ内のコマンドを直接実行する &raquo;</a>
       
     </p>
   </footer>
@@ -267,8 +245,8 @@
       
         
         // var disqus_developer = 1;
-        var disqus_identifier = 'http://kkoudev.github.io/blog/2014/08/04/gradle-idea-bug/';
-        var disqus_url = 'http://kkoudev.github.io/blog/2014/08/04/gradle-idea-bug/';
+        var disqus_identifier = 'http://kkoudev.github.io/blog/2017/07/24/blog-moved/';
+        var disqus_url = 'http://kkoudev.github.io/blog/2017/07/24/blog-moved/';
         var disqus_script = 'embed.js';
       
     (function () {

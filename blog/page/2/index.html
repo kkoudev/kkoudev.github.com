@@ -5,7 +5,7 @@
 <!--[if (gt IE 8)|(gt IEMobile 7)|!(IEMobile)|!(IE)]><!--><html class="no-js" lang="en"><!--<![endif]-->
 <head>
   <meta charset="utf-8">
-  <title>EXISTSとSQLの高速化について - 猫好きモバイルアプリケーション開発者記録</title>
+  <title>猫好きモバイルアプリケーション開発者記録</title>
   <meta name="author" content="kkoudev">
 
   
@@ -22,7 +22,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
   
-  <link rel="canonical" href="http://kkoudev.github.io/blog/2013/09/14/sql/">
+  <link rel="canonical" href="http://kkoudev.github.io/blog/page/2/">
   <link href="/favicon.png" rel="icon">
   <link href="/stylesheets/screen.css" media="screen, projection" rel="stylesheet" type="text/css">
   <link href="/stylesheets/data-table.css" rel="stylesheet" type="text/css" />
@@ -66,12 +66,15 @@
 </nav>
   <div id="main">
     <div id="content">
-      <div>
-<article class="hentry" role="article">
+      <div class="blog-index">
   
+  
+  
+    <article>
+      
   <header>
     
-      <h1 class="entry-title">EXISTSとSQLの高速化について</h1>
+      <h1 class="entry-title"><a href="/blog/2013/09/14/sql/">EXISTSとSQLの高速化について</a></h1>
     
     
       <p class="meta">
@@ -89,14 +92,14 @@
 
 <time datetime="2013-09-14T23:54:00+09:00" pubdate data-updated="true">Sep 14<span>th</span>, 2013</time>
         
-         | <a href="#disqus_thread">Comments</a>
+         | <a href="/blog/2013/09/14/sql/#disqus_thread">Comments</a>
         
       </p>
     
   </header>
 
 
-<div class="entry-content"><p>SQL高速化についてはいろんなサイトで取り上げられているので
+  <div class="entry-content"><p>SQL高速化についてはいろんなサイトで取り上げられているので
 今更取り上げる必要はないかと思っていましたが、
 ふと最近仕事をしている中でハマっている人が多いポイントであると感じたため
 改めて書いてみることにしました。</p>
@@ -342,70 +345,20 @@ LEFT JOINで結合し、WHERE句でIDが null かどうかを判定すること�
 システムのデータ量が増えれば増えるほど速度低下を招くクエリであるためオススメできません。
 記述的には少し記述量が増える場合もありますが、それに見合った速度を得ることが出来ますので、EXISTSは積極的にJOINへ置き換えることをお勧め致します。</p>
 </div>
-
-
-  <footer>
-    <p class="meta">
-      
   
-
-<span class="byline author vcard">Posted by <span class="fn">kkoudev</span></span>
-
-      
-
-
-
-
-
-
-
-
   
 
 
-<time datetime="2013-09-14T23:54:00+09:00" pubdate data-updated="true">Sep 14<span>th</span>, 2013</time>
-      
-
-<span class="categories">
+    </article>
   
-    <a class='category' href='/blog/categories/sql/'>SQL</a>
-  
-</span>
-
-
-    </p>
+  <div class="pagination">
     
-      <div class="sharing">
-  
-  <a href="http://twitter.com/share" class="twitter-share-button" data-url="http://kkoudev.github.io/blog/2013/09/14/sql/" data-via="kkoudev" data-counturl="http://kkoudev.github.io/blog/2013/09/14/sql/" >Tweet</a>
-  
-  
-  <div class="g-plusone" data-size="medium"></div>
-  
-  
-    <div class="fb-like" data-send="true" data-width="450" data-show-faces="false"></div>
-  
-</div>
-
-
+    <a href="/blog/archives">Blog Archives</a>
     
-    <p class="meta">
-      
-      
-        <a class="basic-alignment right" href="/blog/2014/03/22/gradle_ide/" title="Next Post: GradleでEclipseとIntellij IDEAの開発環境を作る">GradleでEclipseとIntellij IDEAの開発環境を作る &raquo;</a>
-      
-    </p>
-  </footer>
-</article>
-
-  <section>
-    <h1>Comments</h1>
-    <div id="disqus_thread" aria-live="polite"><noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+    <a class="next" href="/">Newer &rarr;</a>
+    
+  </div>
 </div>
-  </section>
-
-</div>
-
 <aside class="sidebar">
   
     <section>
@@ -438,7 +391,7 @@ LEFT JOINで結合し、WHERE句でIDが null かどうかを判定すること�
 <section>
   <h1>GitHub Repos</h1>
   <ul id="gh_repos">
-    <li class="loading">Status updating...</li>
+    <li class="loading">Status updating&#8230;</li>
   </ul>
   
   <a href="https://github.com/kkoudev">@kkoudev</a> on GitHub
@@ -471,7 +424,6 @@ LEFT JOINで結合し、WHERE句でIDが null かどうかを判定すること�
   
 </aside>
 
-
     </div>
   </div>
   <footer role="contentinfo"><p>
@@ -488,10 +440,7 @@ LEFT JOINで結合し、WHERE句でIDが null かどうかを判定すること�
       var disqus_shortname = 'catmobileapp';
       
         
-        // var disqus_developer = 1;
-        var disqus_identifier = 'http://kkoudev.github.io/blog/2013/09/14/sql/';
-        var disqus_url = 'http://kkoudev.github.io/blog/2013/09/14/sql/';
-        var disqus_script = 'embed.js';
+        var disqus_script = 'count.js';
       
     (function () {
       var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
